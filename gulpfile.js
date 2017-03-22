@@ -65,8 +65,6 @@ var paths = {
 		"src/viewer/viewer.js",
 		"src/viewer/profile.js",
 		"src/viewer/map.js",
-        //"src/viewer/StereoEffect.js",
-        //"src/viewer/webvr-manager.js",
         "src/viewer/VREffect.js",
         "src/viewer/VRControls.js",
         "src/viewer/WebVR.js",

@@ -130,6 +130,7 @@ Potree.Scene = class extends THREE.EventDispatcher{
 		this.scenePointCloud = new THREE.Scene();
 		this.sceneBG = new THREE.Scene();
 		this.camera = new THREE.PerspectiveCamera(this.fov, 1, 0.1, 1000*1000);
+        this.vrcontroller = new THREE.VRControls( this.camera );
 		this.cameraBG = new THREE.Camera();
 		this.pointclouds = [];
 		this.referenceFrame;
@@ -360,7 +361,7 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		this.edlStrength = 1.0;
 		this.edlRadius = 1.4;
 		this.useEDL = false;
-        this.useVR = true;
+        this.useVR = false;
 		this.intensityMax = null;
 		this.heightMin = 0;
 		this.heightMax = 1;
@@ -397,9 +398,14 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		
 		this.potreeRenderer = null;
 		this.highQualityRenderer = null;
-        this.highQualityVRRenderer = null;
 		this.edlRenderer = null;
-        this.edlvrRenderer = null;
+
+        this.potreeVRRenderer = null
+        this.highQualityVRRenderer = null;
+        this.edlVRRenderer = null;
+        this.vrcontroller = null;
+		this.effect = null;
+
 		this.renderer = null;
 		
 		this.scene = null;
@@ -414,9 +420,6 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		this.skybox = null;
 		this.clock = new THREE.Clock();
 		this.background = null;
-
-        this.effect = null;		
-        this.vr_manager = null;
         
 		this.initThree();
 		
@@ -913,10 +916,12 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		}
         if(this.useVR)
         {
+            if (WEBVR.isAvailable()===true){document.body.appendChild( WEBVR.getButton( this.effect ) );}
         }
         else
         {
-            $("button:contains('ENTER VR')").remove()
+            $("button:contains('ENTER VR')").remove();
+            $("button:contains('EXIT VR')").remove();
         }
     };
 
@@ -1517,19 +1522,13 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		this.renderer.domElement.addEventListener("mousedown", function(){
 			this.renderer.domElement.focus();
 		}.bind(this));
-
-        //this.effect = new THREE.StereoEffect(this.renderer);
-        // Create a VR manager helper to enter and exit VR mode.
-	    //this.vr_params = {
-	    //  hideButton: false, // Default: false.
-	    //  isUndistorted: false // Default: false.
-	    //};
-	    //this.vr_manager = new WebVRManager(this.renderer, this.effect, this.vr_params);		
-
+		
 		this.skybox = Potree.utils.loadSkybox(new URL(Potree.resourcePath + "/textures/skybox2/").href);
 
 		// enable frag_depth extension for the interpolation shader, if available
 		this.renderer.context.getExtension("EXT_frag_depth");
+
+		this.effect = new THREE.VREffect( this.renderer );
 	}
 
 	update(delta, timestamp){
@@ -1804,38 +1803,53 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		
 		let queryAll = Potree.startQuery("All", viewer.renderer.getContext());
 		
-        if(Potree.Features.SHADER_EDL.isSupported() && this.useVR){
-            if(this.useEDL){			
-                if(!this.edlvrRenderer ){
-				    this.edlvrRenderer = new EDLVRRenderer(this,this.effect);
+		if(this.useEDL && Potree.Features.SHADER_EDL.isSupported()){
+            if(this.useVR)
+            {
+                if(!this.edlVRRenderer ){
+				    this.edlVRRenderer = new EDLVRRenderer(this,this.camera,this.effect,this.vrcontroller);
 			    }
-			    this.edlvrRenderer.render(this.renderer);
+			    this.edlVRRenderer.render(this.renderer);
             }
             else
             {
-                if(!this.highQualityVRRenderer){
-				    this.highQualityVRRenderer = new HighQualityVRRenderer(this,this.effect);
+			    if(!this.edlRenderer){
+				    this.edlRenderer = new EDLRenderer(this);
+			    }
+			    this.edlRenderer.render(this.renderer);
+            }
+		}
+        else if(this.quality === "Splats"){
+            if(this.useVR)
+            {
+                if(!this.highQualityVRenderer){
+				    this.highQualityVRRenderer = new HighQualityVRRenderer(this,this.camera,this.effect,this.vrcontroller);
 			    }
 			    this.highQualityVRRenderer.render(this.renderer);
             }
+            else{
+			    if(!this.highQualityRenderer){
+				    this.highQualityRenderer = new HighQualityRenderer(this);
+			    }
+			    this.highQualityRenderer.render(this.renderer);
+            }
 		}
-		else if(this.useEDL && Potree.Features.SHADER_EDL.isSupported() && !this.useVR){
-			if(!this.edlRenderer){
-				this.edlRenderer = new EDLRenderer(this);
-			}
-			this.edlRenderer.render(this.renderer);
-		}
-        else if(this.quality === "Splats"){
-			if(!this.highQualityRenderer){
-				this.highQualityRenderer = new HighQualityRenderer(this);
-			}
-			this.highQualityRenderer.render(this.renderer);
-		}else{
-			if(!this.potreeRenderer){
-				this.potreeRenderer = new PotreeRenderer(this);
-			}
+        else{
+            if(this.useVR)
+            {
+                if(!this.potreeVRRenderer){
+				    this.potreeVRRenderer = new PotreeVRRenderer(this,this.camera,this.effect,this.vrcontroller);
+			    }
 			
-			this.potreeRenderer.render();
+			    this.potreeVRRenderer.render();
+            }
+            else
+            {
+			    if(!this.potreeRenderer){
+				    this.potreeRenderer = new PotreeRenderer(this);
+			    }
+			    this.potreeRenderer.render();
+            }
 		}
 		
 		Potree.endQuery(queryAll, viewer.renderer.getContext());
@@ -1874,9 +1888,15 @@ class PotreeRenderer{
 	
 	constructor(viewer){
 		this.viewer = viewer;
+        ;
+        
 	};
 
 	render(){
+
+        ;
+                
+
 		{// resize
 			let width = viewer.scaleFactor * viewer.renderArea.clientWidth;
 			let height = viewer.scaleFactor * viewer.renderArea.clientHeight;
@@ -2143,10 +2163,303 @@ class PotreeRenderer{
 	};
 };
 
+class PotreeVRRenderer{
+	
+	constructor(viewer,camera,effect,controls){
+		this.viewer = viewer;
+        this.controls = controls;
+		this.effect = effect;        
+	};
+
+	render(){
+
+        if(this.controls!=null){this.controls.update();}        
+
+		{// resize
+			let width = viewer.scaleFactor * viewer.renderArea.clientWidth;
+			let height = viewer.scaleFactor * viewer.renderArea.clientHeight;
+			let aspect = width / height;
+			
+			viewer.scene.camera.aspect = aspect;
+			viewer.scene.camera.updateProjectionMatrix();
+			
+			viewer.renderer.setSize(width, height);
+            this.effect.setSize(width, height);
+		}
+		
+		if(Potree.framenumber > 20 && false){
+			
+			if(Potree.__dems === undefined){
+				Potree.__dems = {};
+				Potree.__dems.targetElevation = new THREE.WebGLRenderTarget( 128, 128, { 
+					minFilter: THREE.NearestFilter, 
+					magFilter: THREE.NearestFilter, 
+					format: THREE.RGBAFormat
+				} );
+				
+				Potree.__dems.targetMedian = new THREE.WebGLRenderTarget( 128, 128, { 
+					minFilter: THREE.NearestFilter, 
+					magFilter: THREE.NearestFilter, 
+					format: THREE.RGBAFormat
+				} );
+				
+				Potree.__dems.camera = new THREE.OrthographicCamera(0, 1, 1, 0, 0, 1);
+				
+				// VERTEX SHADER
+				let vsElevation = `
+					precision mediump float;
+					precision mediump int;
+					
+					attribute vec3 position;
+					
+					uniform mat4 modelMatrix;
+					uniform mat4 modelViewMatrix;
+					uniform mat4 projectionMatrix;
+					
+					varying float vElevation;
+					
+					void main(){
+						vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+						gl_Position = projectionMatrix * mvPosition;
+						gl_PointSize = 1.0;
+						
+						vElevation = position.z;
+					}
+				`;
+				
+				// FRAGMENT SHADER
+				let fsElevation = `
+					precision mediump float;
+					precision mediump int;
+					
+					varying float vElevation;
+					
+					void main(){
+						gl_FragColor = vec4(vElevation / 50.0, 0.0, 0.0, 1.0);
+					}
+				`;
+				
+				let vsMedian = `
+					precision mediump float;
+					precision mediump int;
+					
+					attribute vec3 position;
+					attribute vec2 uv;
+					
+					uniform mat4 modelMatrix;
+					uniform mat4 modelViewMatrix;
+					uniform mat4 projectionMatrix;
+				
+					varying vec2 vUV;
+
+					void main() {
+						vUV = uv;
+						
+						vec4 mvPosition = modelViewMatrix * vec4(position,1.0);
+
+						gl_Position = projectionMatrix * mvPosition;
+					}
+				`;
+				
+				let fsMedian = `
+				
+					precision mediump float;
+					precision mediump int;
+					
+					uniform float uWidth;
+					uniform float uHeight;					
+					uniform sampler2D uTexture;
+
+					varying vec2 vUV;
+					
+					void main(){
+						vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);						
+						
+						vec4 color = texture2D(uTexture, uv);
+						gl_FragColor = color;
+                        if(color.a == 0.0){
+							
+                            vec4 sum;
+                            
+                            float minVal = 1.0 / 0.0;
+                            
+                            float sumA = 0.0;
+							for(int i = -1; i <= 1; i++){
+								for(int j = -1; j <= 1; j++){
+									vec2 n = gl_FragCoord.xy + vec2(i, j);
+                                    vec2 uv = n / vec2(uWidth, uHeight);	
+                                    vec4 c = texture2D(uTexture, uv);
+                                    
+                                    if(c.a == 1.0){
+                                    	minVal = min(c.r, minVal);
+                                    }
+                                    
+                                    sumA += c.a;
+								}
+							}
+                            
+                            if(sumA > 0.0){
+                            	gl_FragColor = vec4(minVal, 0.0, 0.0, 1.0);
+                            }else{
+                            	discard;   
+                            }
+						}else{
+							//gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+							gl_FragColor = vec4(color.rgb, 1.0);
+						}
+						
+						
+					}
+				
+				`;
+				
+				Potree.__dems.elevationMaterial = new THREE.RawShaderMaterial( {
+					vertexShader: vsElevation,
+					fragmentShader: fsElevation,
+				} );
+				
+				Potree.__dems.medianFilterMaterial = new THREE.RawShaderMaterial( {
+					uniforms: {
+						uWidth: {value: 1.0},
+						uHeight: {value: 1.0},
+						uTexture: {type: "t", value: Potree.__dems.targetElevation.texture}
+					},
+					vertexShader: vsMedian,
+					fragmentShader: fsMedian,
+				} );
+				
+			}
+			let dems = Potree.__dems;
+			let camera = dems.camera;
+			viewer.renderer.setClearColor(0x0000FF, 0);
+			viewer.renderer.clearTarget(dems.targetElevation, true, true, false );
+			viewer.renderer.clearTarget(dems.targetMedian, true, true, false );
+
+			let node = viewer.scene.pointclouds[0].root;
+			if(node.geometryNode){
+				let box = node.geometryNode.boundingBox;
+				
+				
+				camera.up.set(0, 0, 1);
+				//camera.rotation.x = Math.PI / 2;
+				camera.left = box.min.x;
+				camera.right = box.max.x;
+				camera.top = box.max.y;
+				camera.bottom = box.min.y;
+				camera.near = -1000;
+				camera.far = 1000;
+				camera.updateProjectionMatrix();
+				
+				let scene = new THREE.Scene();
+				//let material = new THREE.PointsMaterial({color: 0x00ff00, size: 0.0001});
+				let material = dems.elevationMaterial;
+				let pointcloud = new THREE.Points(node.geometryNode.geometry, material);
+				scene.add(pointcloud);
+				
+				
+				viewer.renderer.render(pointcloud, camera, dems.targetElevation);
+                this.effect.render(pointcloud, camera, dems.targetElevation);
+				
+				dems.medianFilterMaterial.uniforms.uWidth.value = dems.targetMedian.width;
+				dems.medianFilterMaterial.uniforms.uHeight.value = dems.targetMedian.height;
+				dems.medianFilterMaterial.uniforms.uTexture.value = dems.targetElevation.texture;
+				
+				//Potree.utils.screenPass.render(viewer.renderer, dems.medianFilterMaterial, dems.targetMedian);
+                Potree.utils.screenPass.render(this.effect, dems.medianFilterMaterial, dems.targetMedian);
+
+				plane.material = new THREE.MeshBasicMaterial({map: dems.targetMedian.texture});
+			}
+		}
+		
+
+		//var queryAll = Potree.startQuery("All", viewer.renderer.getContext());
+		
+		// render skybox
+		if(viewer.background === "skybox"){
+			viewer.renderer.clear(true, true, false);
+			viewer.skybox.camera.rotation.copy(viewer.scene.camera.rotation);
+			viewer.skybox.camera.fov = viewer.scene.camera.fov;
+			viewer.skybox.camera.aspect = viewer.scene.camera.aspect;
+			viewer.skybox.camera.updateProjectionMatrix();
+			//viewer.renderer.render(viewer.skybox.scene, viewer.skybox.camera);
+            this.effect.render(viewer.skybox.scene, viewer.skybox.camera);
+		}else if(viewer.background === "gradient"){
+			//viewer.renderer.clear(true, true, false);
+			//viewer.renderer.render(viewer.scene.sceneBG, viewer.scene.cameraBG);
+            this.effect.render(viewer.scene.sceneBG, viewer.scene.cameraBG);
+		}else if(viewer.background === "black"){
+			viewer.renderer.setClearColor(0x000000, 1);
+			viewer.renderer.clear(true, true, false);
+		}else if(viewer.background === "white"){
+			viewer.renderer.setClearColor(0xFFFFFF, 1);
+			viewer.renderer.clear(true, true, false);
+		}
+		
+		
+		
+		for(let i = 0; i < viewer.scene.pointclouds.length; i++){
+			let pointcloud = viewer.scene.pointclouds[i];
+			if(pointcloud.originalMaterial){
+				pointcloud.material = pointcloud.originalMaterial;
+			}
+			
+			let bbWorld = Potree.utils.computeTransformedBoundingBox(pointcloud.boundingBox, pointcloud.matrixWorld);
+			
+			pointcloud.material.useEDL = false;
+			pointcloud.material.size = viewer.pointSize;
+			pointcloud.material.minSize = viewer.minPointSize;
+			pointcloud.material.maxSize = viewer.maxPointSize;
+			pointcloud.material.opacity = viewer.opacity;
+			pointcloud.material.pointColorType = viewer.pointColorType;
+			pointcloud.material.pointSizeType = viewer.pointSizeType;
+			pointcloud.material.pointShape = (viewer.quality === "Circles") ? Potree.PointShape.CIRCLE : Potree.PointShape.SQUARE;
+			pointcloud.material.interpolate = (viewer.quality === "Interpolation");
+			pointcloud.material.weighted = false;
+		}
+		
+		
+		//var queryPC = Potree.startQuery("PointCloud", viewer.renderer.getContext());
+		//viewer.renderer.render(viewer.scene.scenePointCloud, viewer.scene.camera);
+        this.effect.render(viewer.scene.scenePointCloud, viewer.scene.camera);
+		//Potree.endQuery(queryPC, viewer.renderer.getContext());
+		
+		// render scene
+		//viewer.renderer.render(viewer.scene.scene, viewer.scene.camera);
+        this.effect.render(viewer.scene.scene, viewer.scene.camera);
+		
+		viewer.volumeTool.update();
+		//viewer.renderer.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
+		//viewer.renderer.render(viewer.controls.sceneControls, viewer.scene.camera);
+
+        this.effect.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
+		this.effect.render(viewer.controls.sceneControls, viewer.scene.camera);
+		
+		viewer.renderer.clearDepth();
+		
+		viewer.measuringTool.update();
+		viewer.profileTool.update();
+		viewer.transformationTool.update();
+		
+		//viewer.renderer.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
+		//viewer.renderer.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
+		//viewer.renderer.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
+
+        this.effect.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
+		this.effect.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
+		this.effect.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
+		
+		
+		//Potree.endQuery(queryAll, viewer.renderer.getContext());
+		
+		//Potree.resolveQueries(viewer.renderer.getContext());
+	};
+};
+
 // high quality rendering using splats
 class HighQualityRenderer{
 	
 	constructor(viewer){
+        
 		this.viewer = viewer;
 		
 		this.depthMaterial = null;
@@ -2224,7 +2537,6 @@ class HighQualityRenderer{
 
 	// render with splats
 	render(renderer){
-	
 		var width = viewer.renderArea.clientWidth;
 		var height = viewer.renderArea.clientHeight;
 	
@@ -2348,17 +2660,14 @@ class HighQualityRenderer{
 // high quality rendering using splats
 class HighQualityVRRenderer{
 	
-	constructor(viewer,effect){
+	constructor(viewer,camera,effect,controls){
 		this.viewer = viewer;
-		
+        this.controls = controls;
+		this.effect = effect;        
+
 		this.depthMaterial = null;
 		this.attributeMaterial = null;
-		this.normalizationMaterial = null;
-
-        this.controls = new THREE.VRControls( viewer.scene.camera );
-		this.effect = new THREE.VREffect( viewer.renderer );        
-
-        if (WEBVR.isAvailable()===true){document.body.appendChild( WEBVR.getButton( this.effect ) );}
+		this.normalizationMaterial = null;     
 
 		this.rtDepth;
 		this.rtNormalize;
@@ -2432,7 +2741,7 @@ class HighQualityVRRenderer{
 
 	// render with splats
 	render(renderer){
-	
+        
 		var width = viewer.renderArea.clientWidth;
 		var height = viewer.renderArea.clientHeight;
 	
@@ -2440,7 +2749,7 @@ class HighQualityVRRenderer{
 		
 		this.resize(width, height);
 		
-        this.controls.update();
+        if(this.controls!=null){this.controls.update();}
 		
 		viewer.renderer.clear();
 		if(viewer.background === "skybox"){
@@ -2449,11 +2758,11 @@ class HighQualityVRRenderer{
 			viewer.skybox.camera.fov = viewer.scene.camera.fov;
 			viewer.skybox.camera.aspect = viewer.scene.camera.aspect;
 			viewer.skybox.camera.updateProjectionMatrix();
-			viewer.renderer.render(viewer.skybox.scene, viewer.skybox.camera);
+			//viewer.renderer.render(viewer.skybox.scene, viewer.skybox.camera);
             this.effect.render(viewer.skybox.scene, viewer.skybox.camera);
 		}else if(viewer.background === "gradient"){
 			viewer.renderer.clear();
-			viewer.renderer.render(viewer.scene.sceneBG, viewer.scene.cameraBG);
+			//viewer.renderer.render(viewer.scene.sceneBG, viewer.scene.cameraBG);
             this.effect.render(viewer.scene.sceneBG, viewer.scene.cameraBG);
 		}else if(viewer.background === "black"){
 			viewer.renderer.setClearColor(0x000000, 0);
@@ -2463,7 +2772,7 @@ class HighQualityVRRenderer{
 			viewer.renderer.clear();
 		}
 		
-		viewer.renderer.render(viewer.scene.scene, viewer.scene.camera);
+		//viewer.renderer.render(viewer.scene.scene, viewer.scene.camera);
         this.effect.render(viewer.scene.scene, viewer.scene.camera);
 		
 		for(let pointcloud of viewer.scene.pointclouds){
@@ -2494,7 +2803,8 @@ class HighQualityVRRenderer{
 				
 				viewer.scene.scenePointCloud.overrideMaterial = this.depthMaterial;
 				viewer.renderer.clearTarget( this.rtDepth, true, true, true );
-				viewer.renderer.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtDepth);
+				//viewer.renderer.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtDepth);
+                this.effect.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtDepth);
 				viewer.scene.scenePointCloud.overrideMaterial = null;
 			}
 			
@@ -2525,25 +2835,29 @@ class HighQualityVRRenderer{
 				
 				viewer.scene.scenePointCloud.overrideMaterial = this.attributeMaterial;
 				viewer.renderer.clearTarget( this.rtNormalize, true, true, true );
-				viewer.renderer.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtNormalize);
+				//viewer.renderer.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtNormalize);
+                this.effect.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtNormalize);
 				viewer.scene.scenePointCloud.overrideMaterial = null;
 				
 				pointcloud.material = originalMaterial;
 			}
-            this.effect.render(viewer.scene.scenePointCloud, viewer.scene.camera);
 		}
 		
 		if(viewer.scene.pointclouds.length > 0){
 			{// NORMALIZATION PASS
 				this.normalizationMaterial.uniforms.depthMap.value = this.rtDepth;
 				this.normalizationMaterial.uniforms.texture.value = this.rtNormalize;
-				Potree.utils.screenPass.render(viewer.renderer, this.normalizationMaterial);
+				//Potree.utils.screenPass.render(viewer.renderer, this.normalizationMaterial);
+                Potree.utils.screenPass.render(this.effect, this.normalizationMaterial);
 			}
 			
 			viewer.volumeTool.update();
 			viewer.renderer.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
 			viewer.renderer.render(viewer.controls.sceneControls, viewer.scene.camera);
-			
+
+            this.effect.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
+            this.effect.render(viewer.controls.sceneControls, viewer.scene.camera);			
+            
 			viewer.renderer.clearDepth();
 			
 			viewer.measuringTool.update();
@@ -2553,6 +2867,10 @@ class HighQualityVRRenderer{
 			viewer.renderer.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
 			viewer.renderer.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
 			viewer.renderer.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
+
+            this.effect.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
+			this.effect.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
+			this.effect.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
 		}
 
 	}
@@ -2562,6 +2880,7 @@ class HighQualityVRRenderer{
 class EDLRenderer{
 	
 	constructor(viewer){
+        
 		this.viewer = viewer;
 		
 		this.edlMaterial = null;
@@ -2811,16 +3130,13 @@ class EDLRenderer{
 
 class EDLVRRenderer{
 	
-	constructor(viewer,effect){
+	constructor(viewer,camera,effect,controls){
 		this.viewer = viewer;
-		
+        this.controls = controls;
+		this.effect = effect;        
+        
 		this.edlMaterial = null;
 		this.attributeMaterials = [];
-
-        this.controls = new THREE.VRControls( viewer.scene.camera );
-		this.effect = new THREE.VREffect( viewer.renderer );        
-
-        if (WEBVR.isAvailable()===true){document.body.appendChild( WEBVR.getButton( this.effect ) );}
 
 		this.rtColor = null;
 		this.gl = viewer.renderer.context;
@@ -2868,11 +3184,12 @@ class EDLVRRenderer{
 	}
 
 	render(){
-	
+
 		this.initEDL();
 		
 		this.resize();
 		
+        if(this.controls!=null){this.controls.update();}
 		
 		if(viewer.background === "skybox"){
 			viewer.renderer.clear();
@@ -2970,10 +3287,12 @@ class EDLVRRenderer{
 		}
 		
 		//var queryPC = Potree.startQuery("PointCloud", viewer.renderer.getContext());
+        
 		viewer.renderer.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtColor);
 		viewer.renderer.render(viewer.scene.scene, viewer.scene.camera, this.rtColor);
-        this.effect.render(viewer.scene.scenePointCloud, viewer.scene.camera);
-        this.effect.render(viewer.scene.scene, viewer.scene.camera);
+        
+        this.effect.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtColor);
+        this.effect.render(viewer.scene.scene, viewer.scene.camera, this.rtColor);
 		//Potree.endQuery(queryPC, viewer.renderer.getContext());
 		
 		
@@ -2997,6 +3316,7 @@ class EDLVRRenderer{
 		
 		viewer.volumeTool.update();
 		viewer.renderer.render(viewer.volumeTool.sceneVolume, viewer.scene.camera, this.rtColor);
+        this.effect.render(viewer.volumeTool.sceneVolume, viewer.scene.camera, this.rtColor);
 			
 		if(viewer.scene.pointclouds.length > 0){
 			
@@ -3019,11 +3339,10 @@ class EDLVRRenderer{
 				this.edlMaterial.depthWrite = true;
 				this.edlMaterial.transparent = true;
 			
-				Potree.utils.screenPass.render(viewer.renderer, this.edlMaterial);
+				//Potree.utils.screenPass.render(viewer.renderer, this.edlMaterial);
+                Potree.utils.screenPass.render(this.effect, this.edlMaterial);
 			}
-            
-            this.effect.render(viewer.scene.scene, viewer.scene.camera);
-			
+
 //			viewer.renderer.render(viewer.scene.scene, viewer.scene.camera);
 			
 			//Potree.endQuery(query, viewer.renderer.getContext());
@@ -3031,22 +3350,24 @@ class EDLVRRenderer{
 			
 			
 			viewer.renderer.clearDepth();
-			//viewer.volumeTool.update();
-			//viewer.renderer.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
+			viewer.volumeTool.update();
+			viewer.renderer.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
+			viewer.renderer.render(viewer.controls.sceneControls, viewer.scene.camera);
+            this.effect.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
+            this.effect.render(viewer.controls.sceneControls, viewer.scene.camera);
 			
-			//viewer.measuringTool.update();
-			//viewer.profileTool.update();
-			//viewer.transformationTool.update();
 			
-			//viewer.renderer.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
-			//viewer.renderer.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
-			//viewer.renderer.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
+			viewer.measuringTool.update();
+			viewer.profileTool.update();
+			viewer.transformationTool.update();
 			
-			//viewer.profileTool.render();
-			//viewer.volumeTool.render();
-			//viewer.renderer.clearDepth();
-			//viewer.measuringTool.render();
-			//viewer.transformationTool.render();
+			viewer.renderer.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
+			viewer.renderer.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
+			viewer.renderer.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
+
+            this.effect.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
+            this.effect.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
+            this.effect.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
 		}
 		
 		
