@@ -58,7 +58,7 @@
 		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
 
 		viewer.setEDLEnabled(false);
-		viewer.setPointSize(2.0);
+		viewer.setPointSize(0.2);
 		viewer.setMaterial("RGB");
 		viewer.setFOV(60);
 		viewer.setPointSizing("Fixed");
@@ -87,7 +87,7 @@
 		{
             var server = "greyhound://localhost:9080/resource/";
 			
-			var resource = "vis_dublin_2015";
+			var resource = "richview_oblique";
 
             if (getQueryParam("server")) {
                 server = getQueryParam("server");
@@ -96,7 +96,7 @@
                 resource = getQueryParam("resource");
             }
 
-			Potree.loadPointCloud(server + resource + "/", "vis_dublin_2015", (e) => {
+			Potree.loadPointCloud(server + resource + "/", "richview_oblique", (e) => {
 				viewer.scene.addPointCloud(e.pointcloud);
 				viewer.fitToScreen(0.5);
 			});

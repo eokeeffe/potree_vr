@@ -12351,17 +12351,17 @@ var getQueryParam = function(name) {
 Potree.View = class{
 	constructor(){
 		this.position = new THREE.Vector3(0, 0, 0);
-		
+
 		this.yaw = Math.PI / 4;
 		this._pitch = -Math.PI / 4;
 		this.radius = 1;
-		
+
 		this.maxPitch = Math.PI / 2;
 		this.minPitch = -Math.PI / 2;
-		
+
 		this.navigationMode = Potree.OrbitControls;
 	}
-	
+
 	clone(){
 		let c = new Potree.View();
 		c.yaw = this.yaw;
@@ -12370,102 +12370,102 @@ Potree.View = class{
 		c.maxPitch = this.maxPitch;
 		c.minPitch = this.minPitch;
 		c.navigationMode = this.navigationMode;
-		
+
 		return c;
 	}
-	
+
 	get pitch(){
 		return this._pitch;
 	}
-	
+
 	set pitch(angle){
 		this._pitch = Math.max(Math.min(angle, this.maxPitch), this.minPitch);
 	}
-	
+
 	get direction(){
 		let dir = new THREE.Vector3(0, 1, 0);
-		
+
 		dir.applyAxisAngle(new THREE.Vector3(1, 0, 0), this.pitch);
 		dir.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.yaw);
-		
+
 		return dir;
 	}
-	
+
 	set direction(dir){
 		let yaw = Math.atan2(dir.y, dir.x) - Math.PI / 2;
 		let pitch = Math.atan2(dir.z, Math.sqrt(dir.x * dir.x + dir.y * dir.y));
-		
+
 		this.yaw = yaw;
 		this.pitch = pitch;
 	}
-	
+
 	lookAt(t){
 		let V = new THREE.Vector3().subVectors(t, this.position);
 		let radius = V.length();
 		let dir = V.normalize();
-		
+
 		this.radius = radius;
 		this.direction = dir;
 	}
-	
+
 	getPivot(){
 		return new THREE.Vector3().addVectors(this.position, this.direction.multiplyScalar(this.radius));
 	}
-	
+
 	getSide(){
 		let side = new THREE.Vector3(1, 0, 0);
 		side.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.yaw);
-		
+
 		return side;
 	}
-	
+
 	pan(x, y){
 		let dir = new THREE.Vector3(0, 1, 0);
 		dir.applyAxisAngle(new THREE.Vector3(1, 0, 0), this.pitch);
 		dir.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.yaw);
-		
+
 		//let side = new THREE.Vector3(1, 0, 0);
 		//side.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.yaw);
-		
+
 		let side = this.getSide();
-		
+
 		let up = side.clone().cross(dir);
-		
+
 		let pan = side.multiplyScalar(x).add(up.multiplyScalar(y));
-		
+
 		this.position = this.position.add(pan);
 		//this.target = this.target.add(pan);
 	}
-	
+
 	translate(x, y, z){
 		let dir = new THREE.Vector3(0, 1, 0);
 		dir.applyAxisAngle(new THREE.Vector3(1, 0, 0), this.pitch);
 		dir.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.yaw);
-		
+
 		let side = new THREE.Vector3(1, 0, 0);
 		side.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.yaw);
-		
+
 		let up = side.clone().cross(dir);
-		
+
 		let t = side.multiplyScalar(x)
 			.add(dir.multiplyScalar(y))
 			.add(up.multiplyScalar(z));
-		
+
 		this.position = this.position.add(t);
 	}
-	
+
 	translateWorld(x, y, z){
 		this.position.x += x;
 		this.position.y += y;
 		this.position.z += z;
 	}
-	
+
 };
 
 Potree.Scene = class extends THREE.EventDispatcher{
 	constructor(){
 		super();
-		
+
 		this.annotations = [];
 		this.scene = new THREE.Scene();
 		this.scenePointCloud = new THREE.Scene();
@@ -12475,34 +12475,34 @@ Potree.Scene = class extends THREE.EventDispatcher{
 		this.cameraBG = new THREE.Camera();
 		this.pointclouds = [];
 		this.referenceFrame;
-		
+
 		this.measurements = [];
 		this.profiles = [];
 		this.volumes = [];
-		
+
 		this.fpControls;
 		this.orbitControls;
 		this.earthControls;
 		this.geoControls;
 		this.inputHandler;
 		this.view = new Potree.View();
-		
+
 		this.directionalLight = null;
-		
+
 		this.initialize();
-		
+
 	}
-	
+
 	addPointCloud(pointcloud){
 		this.pointclouds.push(pointcloud);
 		this.scenePointCloud.add(pointcloud);
-		
+
 		this.dispatchEvent({
 			type: "pointcloud_added",
 			pointcloud: pointcloud
 		});
 	};
-	
+
 	addVolume(volume){
 		this.volumes.push(volume);
 		this.dispatchEvent({
@@ -12511,7 +12511,7 @@ Potree.Scene = class extends THREE.EventDispatcher{
 			"volume": volume
 		});
 	};
-	
+
 	removeVolume(volume){
 		let index = this.volumes.indexOf(volume);
 		if (index > -1) {
@@ -12523,7 +12523,7 @@ Potree.Scene = class extends THREE.EventDispatcher{
 			});
 		}
 	};
-	
+
 	addMeasurement(measurement){
 		this.measurements.push(measurement);
 		this.dispatchEvent({
@@ -12532,7 +12532,7 @@ Potree.Scene = class extends THREE.EventDispatcher{
 			"measurement": measurement
 		});
 	};
-	
+
 	removeMeasurement(measurement){
 		let index = this.measurements.indexOf(measurement);
 		if (index > -1) {
@@ -12544,7 +12544,7 @@ Potree.Scene = class extends THREE.EventDispatcher{
 			});
 		}
 	}
-	
+
 	addProfile(profile){
 		this.profiles.push(profile);
 		this.dispatchEvent({
@@ -12553,7 +12553,7 @@ Potree.Scene = class extends THREE.EventDispatcher{
 			"profile": profile
 		});
 	}
-	
+
 	removeProfile(profile){
 		let index = this.profiles.indexOf(profile);
 		if (index > -1) {
@@ -12565,19 +12565,19 @@ Potree.Scene = class extends THREE.EventDispatcher{
 			});
 		}
 	}
-	
+
 	removeAllMeasurements(){
 		while(this.measurements.length > 0){
 			this.removeMeasurement(this.measurements[0]);
 		}
-		
+
 		while(this.profiles.length > 0){
 			this.removeProfile(this.profiles[0]);
 		}
 	}
-	
+
 	initialize(){
-		
+
 		this.referenceFrame = new THREE.Object3D();
 		this.referenceFrame.matrixAutoUpdate = false;
 		this.scenePointCloud.add(this.referenceFrame);
@@ -12586,22 +12586,22 @@ Potree.Scene = class extends THREE.EventDispatcher{
 		this.camera.position.set(1000, 1000, 1000);
 		//this.camera.rotation.y = -Math.PI / 4;
 		//this.camera.rotation.x = -Math.PI / 6;
-		
+
 		this.directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
 		this.directionalLight.position.set( 10, 10, 10 );
 		this.directionalLight.lookAt( new THREE.Vector3(0, 0, 0));
 		this.scenePointCloud.add( this.directionalLight );
-		
+
 		var light = new THREE.AmbientLight( 0x555555 ); // soft white light
 		this.scenePointCloud.add( light );
-		
+
 		let grid = Potree.utils.createGrid(5, 5, 2);
 		this.scene.add(grid);
-		
+
 		{// background
 		// var texture = THREE.ImageUtils.loadTexture( Potree.resourcePath + '/textures/background.gif' );
 			let texture = Potree.utils.createBackgroundTexture(512, 512);
-			
+
 			texture.minFilter = texture.magFilter = THREE.NearestFilter;
 			texture.minFilter = texture.magFilter = THREE.LinearFilter;
 			let bg = new THREE.Mesh(
@@ -12614,77 +12614,77 @@ Potree.Scene = class extends THREE.EventDispatcher{
 			bg.material.depthWrite = false;
 			this.sceneBG.add(bg);
 		}
-		
+
 		{// lights
-		
+
 			{
 				let light = new THREE.DirectionalLight( 0xffffff );
 				light.position.set( 10, 10, 1 );
 				light.target.position.set( 0, 0,0 );
 				this.scene.add(light);
 			}
-			
+
 			{
 				let light = new THREE.DirectionalLight( 0xffffff );
 				light.position.set( -10, 10, 1 );
 				light.target.position.set( 0, 0,0 );
 				this.scene.add(light);
 			}
-			
+
 			{
 				let light = new THREE.DirectionalLight( 0xffffff );
 				light.position.set( 0, -10, 20 );
 				light.target.position.set( 0, 0,0 );
 				this.scene.add(light);
 			}
-			
+
 		}
 	}
-	
+
 	addAnnotation(position, args = {}){
 		if(position instanceof Array){
 			args.position = new THREE.Vector3().fromArray(position);
 		}else if(position instanceof THREE.Vector3){
 			args.position = position;
 		}
-		
-		
+
+
 		if(!args.cameraTarget){
 			args.cameraTarget = position;
 		}
-		
+
 		var annotation = new Potree.Annotation(this, args);
-		
+
 		this.annotations.push(annotation);
-		
+
 		this.dispatchEvent({
-			"type": "annotation_added", 
+			"type": "annotation_added",
 			"scene": this,
 			"annotation": annotation});
-		
+
 		return annotation;
 	}
-	
+
 	getAnnotations(){
 		return this.annotations;
 	};
-	
+
 };
 
 Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
-	
+
 	constructor(domElement, args){
 		super();
-		
+
 		var a = args || {};
 		this.pointCloudLoadedCallback = a.onPointCloudLoaded || function(){};
-		
+
 		this.renderArea = domElement;
-		
+
 		//if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
 		//	defaultSettings.navigation = "Orbit";
 		//}
-		
+
 		this.fov = 60;
 		this.pointSize = 1;
 		this.minPointSize = 1;
@@ -12720,7 +12720,7 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		this.rgbGamma = 1;
 		this.rgbContrast = 0;
 		this.rgbBrightness = 0;
-		
+
 		this.moveSpeed = 10;
 
 		this.showDebugInfos = false;
@@ -12736,7 +12736,7 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		//this.stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
 		//document.body.appendChild( this.stats.dom );
 		//this.stats.dom.style.left = "100px";
-		
+
 		this.potreeRenderer = null;
 		this.highQualityRenderer = null;
 		this.edlRenderer = null;
@@ -12748,74 +12748,74 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		this.effect = null;
 
 		this.renderer = null;
-		
+
 		this.scene = null;
-		
+
 		this.inputHandler = null;
 
 		this.measuringTool = null;
 		this.profileTool = null;
 		this.volumeTool = null;
 		this.transformationTool = null;
-		
+
 		this.skybox = null;
 		this.clock = new THREE.Clock();
 		this.background = null;
-        
+
 		this.initThree();
-		
+
 		let scene = new Potree.Scene(this.renderer);
 		this.setScene(scene);
-		
+
 		{
 			this.inputHandler = new Potree.InputHandler(this);
 			this.inputHandler.setScene(this.scene);
-			
+
 			this.measuringTool = new Potree.MeasuringTool(this);
 			this.profileTool = new Potree.ProfileTool(this);
 			this.volumeTool = new Potree.VolumeTool(this);
 			this.transformationTool = new Potree.TransformationTool(this);
-			
+
 			this.createControls();
-			
+
 			this.measuringTool.setScene(this.scene);
 			this.profileTool.setScene(this.scene);
 			this.volumeTool.setScene(this.scene);
 			//this.transformationTool.setScene(this.scene);
-			
+
 			let onPointcloudAdded = (e) => {
 				this.updateHeightRange();
-				
+
 				if(this.scene.pointclouds.length === 1){
 					let speed = e.pointcloud.boundingBox.getSize().length();
 					speed = speed / 5;
 					this.setMoveSpeed(speed);
 					//this.scene.view.radius = speed * 2.5;
 				}
-				
-				
+
+
 				//if(e.pointcloud.projection){
 				//	this.mapView = new Potree.MapView(this);
 				//	this.mapView.init();
 				//}
-				
+
 			};
-			
+
 			this.addEventListener("scene_changed", (e) => {
 				this.inputHandler.setScene(e.scene);
 				this.measuringTool.setScene(e.scene);
 				this.profileTool.setScene(e.scene);
 				this.volumeTool.setScene(e.scene);
 				this.updateHeightRange();
-				
+
 				if(!e.scene.hasEventListener("pointcloud_added", onPointcloudAdded)){
 					e.scene.addEventListener("pointcloud_added", onPointcloudAdded);
 				}
 			});
-			
+
 			this.scene.addEventListener("pointcloud_added", onPointcloudAdded);
 		}
-		
+
 		{// set defaults
 			this.setPointSize(1);
 			this.setFOV(60);
@@ -12830,52 +12830,52 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			this.setFreeze(false);
 			this.setNavigationMode(Potree.OrbitControls);
 			this.setBackground("gradient");
-			
+
 			this.scaleFactor = 1;
-		
+
 			this.loadSettingsFromURL();
 		}
 
 		// start rendering!
 		requestAnimationFrame(this.loop.bind(this));
-		
+
 	}
 
 //------------------------------------------------------------------------------------
-// Viewer API 
+// Viewer API
 //------------------------------------------------------------------------------------
 
-	
-	
+
+
 	setScene(scene){
-		
+
 		if(scene === this.scene){
 			return;
 		}
-		
+
 		let oldScene = scene;
 		this.scene = scene;
-		
+
 		this.dispatchEvent({
 			type: "scene_changed",
 			oldScene: oldScene,
 			scene: scene
 		});
-		
-		
+
+
 		{ // Annotations
 			$(".annotation").detach();
-			
+
 			for(let annotation of this.scene.annotations){
 				this.renderArea.appendChild(annotation.domElement);
 			}
-		
+
 			// TODO make sure this isn't added multiple times on scene switches
 			this.scene.addEventListener("annotation_added", (e) => {
 				if(e.scene === this.scene){
 					this.renderArea.appendChild(e.annotation.domElement);
 				}
-				
+
 				//focusing_finished
 				e.annotation.addEventListener("focusing_finished", (event) => {
 					let distance = this.scene.view.position.distanceTo(this.scene.view.getPivot());
@@ -12885,9 +12885,9 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 				});
 			});
 		}
-		
+
 	};
-	
+
 	getControls(navigationMode){
 		if(navigationMode === Potree.OrbitControls){
 			return this.orbitControls;
@@ -12899,7 +12899,7 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			return null;
 		}
 	}
-	
+
 	//loadPointCloud(path, name, callback){
     //
 	//	// load pointcloud
@@ -12922,7 +12922,7 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 	//			}else{
 	//				let pointcloud = new Potree.PointCloudOctree(geometry);
     //                pointcloud.name = name;
-	//				initPointcloud(pointcloud);				
+	//				initPointcloud(pointcloud);
 	//			}
 	//		}.bind(this));
 	//	}else if(path.indexOf(".vpc") > 0){
@@ -12939,50 +12939,50 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 	//		callback({"type": "loading_failed"});
 	//	}
 	//}
-	
+
 	getMinNodeSize(){
 		return this.minNodeSize;
 	};
-	
+
 	setMinNodeSize(value){
 		if(this.minNodeSize !== value){
 			this.minNodeSize = value;
 			this.dispatchEvent({"type": "minnodesize_changed", "viewer": this});
 		}
 	};
-	
+
 	getBackground(){
 		return this.background;
 	};
-	
+
 	setBackground(bg){
 		if(this.background === bg){
 			return;
 		}
-		
+
 		this.background = bg;
 		this.dispatchEvent({"type": "background_changed", "viewer": this});
 	}
-	
+
 	setDescription(value){
 		$('#potree_description')[0].innerHTML = value;
 	};
-	
+
 	setNavigationMode(value){
 		this.scene.view.navigationMode = value;
 	};
-	
+
 	setShowBoundingBox(value){
 		if(this.showBoundingBox !== value){
 			this.showBoundingBox = value;
 			this.dispatchEvent({"type": "show_boundingbox_changed", "viewer": this});
 		}
 	};
-	
+
 	getShowBoundingBox(){
 		return showBoundingBox;
 	};
-	
+
 	setMoveSpeed(value){
 		if(this.moveSpeed !== value){
 			this.moveSpeed = value;
@@ -12992,11 +12992,11 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			this.dispatchEvent({"type": "move_speed_changed", "viewer": this, "speed": value});
 		}
 	};
-	
+
 	getMoveSpeed(){
 		return this.moveSpeed;
 	};
-	
+
 	//setShowSkybox(value){
 	//	if(this.showSkybox !== value){
 	//		this.showSkybox = value;
@@ -13007,7 +13007,7 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 	//getShowSkybox(){
 	//	return this.showSkybox;
 	//};
-	
+
 	setHeightRange(min, max){
 		if(this.heightMin !== min || this.heightMax !== max){
 			this.heightMin = min || this.heightMin;
@@ -13015,19 +13015,19 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			this.dispatchEvent({"type": "height_range_changed", "viewer": this});
 		}
 	};
-	
+
 	getHeightRange(){
 		return {min: this.heightMin, max: this.heightMax};
 	};
-	
+
 	getElevationRange(){
 		return this.getHeightRange();
 	};
-	
+
 	setElevationRange(min, max){
 		this.setHeightRange(min, max);
 	}
-	
+
 	setIntensityRange(min, max){
 		if(this.intensityRange[0] !== min || this.intensityRange[1] !== max){
 			this.intensityRange[0] = min || this.intensityRange[0];
@@ -13035,176 +13035,176 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			this.dispatchEvent({"type": "intensity_range_changed", "viewer": this});
 		}
 	};
-	
+
 	getIntensityRange(){
 		return this.intensityRange;
 	};
-	
+
 	setIntensityGamma(value){
 		if(this.intensityGamma !== value){
 			this.intensityGamma = value;
 			this.dispatchEvent({"type": "intensity_gamma_changed", "viewer": this});
 		}
 	};
-	
+
 	getIntensityGamma(){
 		return this.intensityGamma;
 	};
-	
+
 	setIntensityContrast(value){
 		if(this.intensityContrast !== value){
 			this.intensityContrast = value;
 			this.dispatchEvent({"type": "intensity_contrast_changed", "viewer": this});
 		}
 	};
-	
+
 	getIntensityContrast(){
 		return this.intensityContrast;
 	};
-	
+
 	setIntensityBrightness(value){
 		if(this.intensityBrightness !== value){
 			this.intensityBrightness = value;
 			this.dispatchEvent({"type": "intensity_brightness_changed", "viewer": this});
 		}
 	};
-	
+
 	getIntensityBrightness(){
 		return this.intensityBrightness;
 	};
-	
+
 	setRGBGamma(value){
 		if(this.rgbGamma !== value){
 			this.rgbGamma = value;
 			this.dispatchEvent({"type": "rgb_gamma_changed", "viewer": this});
 		}
 	};
-	
+
 	getRGBGamma(){
 		return this.rgbGamma;
 	};
-	
+
 	setRGBContrast(value){
 		if(this.rgbContrast !== value){
 			this.rgbContrast = value;
 			this.dispatchEvent({"type": "rgb_contrast_changed", "viewer": this});
 		}
 	};
-	
+
 	getRGBContrast(){
 		return this.rgbContrast;
 	};
-	
+
 	setRGBBrightness(value){
 		if(this.rgbBrightness !== value){
 			this.rgbBrightness = value;
 			this.dispatchEvent({"type": "rgb_brightness_changed", "viewer": this});
 		}
 	};
-	
+
 	getRGBBrightness(){
 		return this.rgbBrightness;
 	};
-	
+
 	setMaterialTransition(t){
 		if(this.materialTransition !== t){
 			this.materialTransition = t;
 			this.dispatchEvent({"type": "material_transition_changed", "viewer": this});
 		}
 	};
-	
+
 	getMaterialTransition(){
 		return this.materialTransition;
 	};
-	
+
 	setWeightRGB(w){
 		if(this.weightRGB !== w){
 			this.weightRGB = w;
 			this.dispatchEvent({"type": "attribute_weights_changed", "viewer": this});
 		}
 	};
-	
+
 	getWeightRGB(){
 		return this.weightRGB;
 	};
-	
+
 	setWeightIntensity(w){
 		if(this.weightIntensity !== w){
 			this.weightIntensity = w;
 			this.dispatchEvent({"type": "attribute_weights_changed", "viewer": this});
 		}
 	};
-	
+
 	getWeightIntensity(){
 		return this.weightIntensity;
 	};
-	
+
 	setWeightElevation(w){
 		if(this.weightElevation !== w){
 			this.weightElevation = w;
 			this.dispatchEvent({"type": "attribute_weights_changed", "viewer": this});
 		}
 	};
-	
+
 	getWeightElevation(){
 		return this.weightElevation;
 	};
-	
+
 	setWeightClassification(w){
 		if(this.weightClassification !== w){
 			this.weightClassification = w;
 			this.dispatchEvent({"type": "attribute_weights_changed", "viewer": this});
 		}
 	};
-	
+
 	getWeightClassification(){
 		return this.weightClassification;
 	};
-	
+
 	setWeightReturnNumber(w){
 		if(this.weightReturnNumber !== w){
 			this.weightReturnNumber = w;
 			this.dispatchEvent({"type": "attribute_weights_changed", "viewer": this});
 		}
 	};
-	
+
 	getWeightReturnNumber(){
 		return this.weightReturnNumber;
 	};
-	
+
 	setWeightSourceID(w){
 		if(this.weightSourceID !== w){
 			this.weightSourceID = w;
 			this.dispatchEvent({"type": "attribute_weights_changed", "viewer": this});
 		}
 	};
-	
+
 	getWeightSourceID(){
 		return this.weightSourceID;
 	};
-	
+
 	setIntensityMax(max){
 		if(this.intensityMax !== max){
 			this.intensityMax = max;
 			this.dispatchEvent({"type": "intensity_max_changed", "viewer": this});
 		}
 	};
-	
+
 	getIntensityMax(){
 		return this.intensityMax;
 	};
-	
+
 	setFreeze(value){
 		if(this.freeze != value){
 			this.freeze = value;
 			this.dispatchEvent({"type": "freeze_changed", "viewer": this});
 		}
 	};
-	
+
 	getFreeze(){
 		return this.freeze;
 	};
-	
+
 	setPointBudget(value){
 
 		if(Potree.pointBudget != value){
@@ -13212,40 +13212,40 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			this.dispatchEvent({"type": "point_budget_changed", "viewer": this});
 		}
 	};
-	
+
 	getPointBudget(){
 		return Potree.pointBudget;
 	};
-	
+
 	setClipMode(clipMode){
 		if(this.clipMode != clipMode){
 			this.clipMode = clipMode;
 			this.dispatchEvent({"type": "clip_mode_changed", "viewer": this});
 		}
 	};
-	
+
 	getClipMode(){
 		return this.clipMode;
 	};
-	
+
 	setDEMCollisionsEnabled(value){
 		if(this.useDEMCollisions !== value){
 			this.useDEMCollisions = value;
 			this.dispatchEvent({"type": "use_demcollisions_changed", "viewer": this});
 		};
 	};
-	
+
 	getDEMCollisionsEnabled(){
 		return this.useDEMCollisions;
 	};
-	
+
 	setEDLEnabled(value){
 		if(this.useEDL != value){
 			this.useEDL = value;
 			this.dispatchEvent({"type": "use_edl_changed", "viewer": this});
 		}
 	};
-	
+
 	getEDLEnabled(){
 		return this.useEDL;
 	};
@@ -13269,80 +13269,80 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
     getVREnabled(){
 		return this.useVR;
 	};
-	
+
 	setEDLRadius(value){
 		if(this.edlRadius !== value){
 			this.edlRadius = value;
 			this.dispatchEvent({"type": "edl_radius_changed", "viewer": this});
 		}
 	};
-	
+
 	getEDLRadius(){
 		return this.edlRadius;
 	};
-	
+
 	setEDLStrength(value){
 		if(this.edlStrength !== value){
 			this.edlStrength = value;
 			this.dispatchEvent({"type": "edl_strength_changed", "viewer": this});
 		}
 	};
-	
+
 	getEDLStrength(){
 		return this.edlStrength;
 	};
-	
+
 	setPointSize(value){
 		if(this.pointSize !== value){
 			this.pointSize = value;
 			this.dispatchEvent({"type": "point_size_changed", "viewer": this});
 		}
 	};
-	
+
 	getPointSize(){
 		return this.pointSize;
 	};
-	
+
 	setMinPointSize(value){
 		if(this.minPointSize !== value){
 			this.minPointSize = value;
 			this.dispatchEvent({"type": "min_point_size_changed", "viewer": this});
 		}
 	}
-	
+
 	getMinPointSize(){
 		return this.minPointSize;
 	}
-	
+
 	setMaxPointSize(value){
 		if(this.maxPointSize !== value){
 			this.maxPointSize = value;
 			this.dispatchEvent({"type": "max_point_size_changed", "viewer": this});
 		}
 	}
-	
+
 	getMaxPointSize(){
 		return this.maxPointSize;
 	}
-	
+
 	setFOV(value){
 		if(this.fov !== value){
 			this.fov = value;
 			this.dispatchEvent({"type": "fov_changed", "viewer": this});
 		}
 	};
-	
+
 	getFOV(){
 		return this.fov;
 	};
-	
+
 	setOpacity(value){
 		if(this.opacity !== value){
 			this.opacity = value;
 			this.dispatchEvent({"type": "opacity_changed", "viewer": this});
 		}
 	};
-	
+
 	getOpacity(){
 		return this.opacity;
 	};
@@ -13357,11 +13357,11 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			}else if(value === "Adaptive"){
 				this.pointSizeType = Potree.PointSizeType.ADAPTIVE;
 			}
-			
+
 			this.dispatchEvent({"type": "point_sizing_changed", "viewer": this});
 		}
 	};
-	
+
 	getPointSizing(){
 		return this.sizeType;
 	};
@@ -13375,30 +13375,30 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		}else{
 			this.quality = value;
 		}
-		
+
 		if(oldQuality !== this.quality){
 			this.dispatchEvent({"type": "quality_changed", "viewer": this});
 		}
 	};
-	
+
 	getQuality(){
 		return this.quality;
 	};
-	
+
 	disableAnnotations(){
 		for(var i = 0; i < this.scene.annotations.length; i++){
 			var annotation = this.scene.annotations[i];
 			annotation.domElement.style.pointerEvents = "none";
 		};
 	};
-	
+
 	enableAnnotations(){
 		for(var i = 0; i < this.scene.annotations.length; i++){
 			var annotation = this.scene.annotations[i];
 			annotation.domElement.style.pointerEvents = "auto";
 		};
 	};
-	
+
 	setClassificationVisibility(key, value){
 
 		var changed = false;
@@ -13423,27 +13423,27 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 	setMaterial(value){
 		if(this.pointColorType !== this.toMaterialID(value)){
 			this.pointColorType = this.toMaterialID(value);
-			
+
 			this.dispatchEvent({"type": "material_changed", "viewer": this});
 		}
 	};
-	
+
 	setMaterialID(value){
 		if(this.pointColorType !== value){
 			this.pointColorType = value;
-			
+
 			this.dispatchEvent({"type": "material_changed", "viewer": this});
 		}
 	}
-	
+
 	getMaterial(){
 		return this.pointColorType;
 	};
-	
+
 	getMaterialName(){
 		return this.toMaterialName(this.pointColorType);
 	};
-	
+
 	toMaterialID(materialName){
 
 		if(materialName === "RGB"){
@@ -13476,7 +13476,7 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			return Potree.PointColorType.COMPOSITE;
 		}
 	};
-	
+
 	toMaterialName(materialID){
 
 		if(materialID === Potree.PointColorType.RGB){
@@ -13509,17 +13509,17 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			return "Composite";
 		}
 	};
-	
+
 	zoomTo(node, factor){
 		//this.scene.camera.zoomTo(node, factor);
 		let view = this.scene.view;
-		
+
 		let camera = this.scene.camera.clone();
 		camera.position.copy(view.position);
 		camera.lookAt(view.getPivot());
 		camera.updateMatrixWorld();
 		camera.zoomTo(node, factor);
-		
+
 		var bs;
 		if(node.boundingSphere){
 			bs = node.boundingSphere;
@@ -13528,37 +13528,37 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		}else{
 			bs = node.boundingBox.getBoundingSphere();
 		}
-		
-		bs = bs.clone().applyMatrix4(node.matrixWorld); 
-		
+
+		bs = bs.clone().applyMatrix4(node.matrixWorld);
+
 		view.position.copy(camera.position);
 		view.radius = view.position.distanceTo(bs.center);
 		//let target = bs.center;
 		//target.z = target.z - bs.radius * 0.8;
 		//view.lookAt(target);
-		
+
 		this.dispatchEvent({"type": "zoom_to", "viewer": this});
 	};
-	
+
 	showAbout(){
 		$(function() {
 			$( "#about-panel" ).dialog();
 		});
 	};
-	
+
 	getBoundingBox(pointclouds){
 		pointclouds = pointclouds || this.scene.pointclouds;
-		
+
 		var box = new THREE.Box3();
-		
+
 		this.scene.scenePointCloud.updateMatrixWorld(true);
 		this.scene.referenceFrame.updateMatrixWorld(true);
-		
+
 		for(var i = 0; i < this.scene.pointclouds.length; i++){
 			var pointcloud = this.scene.pointclouds[i];
-			
+
 			pointcloud.updateMatrixWorld(true);
-			
+
 			let pointcloudBox = pointcloud.pcoGeometry.tightBoundingBox ?  pointcloud.pcoGeometry.tightBoundingBox : pointcloud.boundingBox;
 			var boxWorld = Potree.utils.computeTransformedBoundingBox(pointcloudBox, pointcloud.matrixWorld)
 			box.union(boxWorld);
@@ -13566,82 +13566,82 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 
 		return box;
 	};
-	
+
 	fitToScreen(factor = 1){
 		var box = this.getBoundingBox(this.scene.pointclouds);
-		
+
 		var node = new THREE.Object3D();
 		node.boundingBox = box;
-		
+
 		this.zoomTo(node, factor);
 	};
-	
+
 	setTopView(){
 		this.scene.view.yaw = 0;
 		this.scene.view.pitch = -Math.PI / 2;
-		
+
 		this.fitToScreen();
 	};
-	
+
 	setFrontView(){
 		this.scene.view.yaw = 0;
 		this.scene.view.pitch = 0;
-		
+
 		this.fitToScreen();
 	};
-	
+
 	setLeftView(){
 		this.scene.view.yaw = -Math.PI / 2;
 		this.scene.view.pitch = 0;
-		
+
 		this.fitToScreen();
 	};
-	
+
 	setRightView(){
 		this.scene.view.yaw = Math.PI / 2;
 		this.scene.view.pitch = 0;
-		
+
 		this.fitToScreen();
 	};
-	
+
 	flipYZ(){
 		this.isFlipYZ = !this.isFlipYZ
-		
-		// TODO flipyz 
+
+		// TODO flipyz
 		console.log("TODO");
 	}
-	
+
 	updateHeightRange(){
 		var bbWorld = this.getBoundingBox();
 		this.setHeightRange(bbWorld.min.z, bbWorld.max.z);
 	};
-	
+
 	loadSettingsFromURL(){
 		if(Potree.utils.getParameterByName("pointSize")){
 			this.setPointSize(parseFloat(Potree.utils.getParameterByName("pointSize")));
 		}
-		
+
 		if(Potree.utils.getParameterByName("FOV")){
 			this.setFOV(parseFloat(Potree.utils.getParameterByName("FOV")));
 		}
-		
+
 		if(Potree.utils.getParameterByName("opacity")){
 			this.setOpacity(parseFloat(Potree.utils.getParameterByName("opacity")));
 		}
-		
+
 		if(Potree.utils.getParameterByName("edlEnabled")){
 			var enabled = Potree.utils.getParameterByName("edlEnabled") === "true";
 			this.setEDLEnabled(enabled);
 		}
-		
+
 		if(Potree.utils.getParameterByName("edlRadius")){
 			this.setEDLRadius(parseFloat(Potree.utils.getParameterByName("edlRadius")));
 		}
-		
+
 		if(Potree.utils.getParameterByName("edlStrength")){
 			this.setEDLStrength(parseFloat(Potree.utils.getParameterByName("edlStrength")));
 		}
-		
+
 		if(Potree.utils.getParameterByName("clipMode")){
 			var clipMode = Potree.utils.getParameterByName("clipMode");
 			if(clipMode === "HIGHLIGHT_INSIDE"){
@@ -13680,7 +13680,7 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			var quality = Potree.utils.getParameterByName("quality");
 			this.setQuality(quality);
 		}
-		
+
 		if(Potree.utils.getParameterByName("position")){
 			let value = Potree.utils.getParameterByName("position");
 			value = value.replace("[", "").replace("]", "");
@@ -13688,10 +13688,10 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			let x = parseFloat(tokens[0]);
 			let y = parseFloat(tokens[1]);
 			let z = parseFloat(tokens[2]);
-			
+
 			this.scene.view.position.set(x, y, z);
 		}
-		
+
 		if(Potree.utils.getParameterByName("target")){
 			let value = Potree.utils.getParameterByName("target");
 			value = value.replace("[", "").replace("]", "");
@@ -13699,35 +13699,35 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			let x = parseFloat(tokens[0]);
 			let y = parseFloat(tokens[1]);
 			let z = parseFloat(tokens[2]);
-			
+
 			this.scene.view.lookAt(new THREE.Vector3(x, y, z));
 		}
-		
+
 		if(Potree.utils.getParameterByName("background")){
 			let value = Potree.utils.getParameterByName("background");
 			this.setBackground(value);
 		}
-		
+
 		//if(Potree.utils.getParameterByName("elevationRange")){
 		//	let value = Potree.utils.getParameterByName("elevationRange");
 		//	value = value.replace("[", "").replace("]", "");
 		//	let tokens = value.split(";");
 		//	let x = parseFloat(tokens[0]);
 		//	let y = parseFloat(tokens[1]);
-		//	
+		//
 		//	this.setElevationRange(x, y);
 		//	//this.scene.view.target.set(x, y, z);
 		//}
-		
-	};
-	
-	
-	
-	
 
-	
-	
-	
+	};
+
+
+
+
+
+
+
+
 //------------------------------------------------------------------------------------
 // Viewer Internals
 //------------------------------------------------------------------------------------
@@ -13746,7 +13746,7 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			//	this.setMoveSpeed(this.fpControls.moveSpeed);
 			//});
 		}
-		
+
 		//{ // create GEO CONTROLS
 		//	this.geoControls = new Potree.GeoControls(this.scene.camera, this.renderer.domElement);
 		//	this.geoControls.enabled = false;
@@ -13756,14 +13756,14 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		//		this.setMoveSpeed(this.geoControls.moveSpeed);
 		//	});
 		//}
-	
+
 		{ // create ORBIT CONTROLS
 			this.orbitControls = new Potree.OrbitControls(this);
 			this.orbitControls.enabled = false;
 			this.orbitControls.addEventListener("start", this.disableAnnotations.bind(this));
 			this.orbitControls.addEventListener("end", this.enableAnnotations.bind(this));
 		}
-		
+
 		{ // create EARTH CONTROLS
 			this.earthControls = new Potree.EarthControls(this);
 			this.earthControls.enabled = false;
@@ -13773,7 +13773,7 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 	};
 
 	toggleSidebar(){
-		
+
 		var renderArea = $('#potree_render_area');
 		var sidebar = $('#potree_sidebar_container');
 		var isVisible = renderArea.css("left") !== "0px";
@@ -13784,7 +13784,7 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			renderArea.css("left", "300px");
 		}
 	};
-	
+
 	toggleMap(){
 		var map = $('#potree_map');
 		map.toggle(100);
@@ -13794,7 +13794,7 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 	loadGUI(callback){
 		var sidebarContainer = $('#potree_sidebar_container');
 		sidebarContainer.load(new URL(Potree.scriptPath + "/sidebar.html").href, () => {
-			
+
 			sidebarContainer.css("width", "300px");
 			sidebarContainer.css("height", "100%");
 
@@ -13808,54 +13808,54 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			imgMapToggle.style.display = "none";
 			imgMapToggle.onclick = this.toggleMap;
 			imgMapToggle.id = "potree_map_toggle";
-			
+
 			viewer.renderArea.insertBefore(imgMapToggle, viewer.renderArea.children[0]);
 			viewer.renderArea.insertBefore(imgMenuToggle, viewer.renderArea.children[0]);
-			
+
 			this.mapView = new Potree.MapView(this);
 			this.mapView.init();
-			
-			i18n.init({ 
+
+			i18n.init({
 				lng: 'en',
 				resGetPath: Potree.resourcePath + '/lang/__lng__/__ns__.json',
 				preload: ['en', 'fr', 'de'],
 				getAsync: true,
 				debug: false
-				}, function(t) { 
+				}, function(t) {
 				// Start translation once everything is loaded
 				$("body").i18n();
 			});
-			
+
 			$(function() {
 				initSidebar();
 			});
-			
+
 			let elProfile = $('<div>').load(new URL(Potree.scriptPath + "/profile.html").href, () => {
 				$('#potree_render_area').append(elProfile.children());
 				this._2dprofile = new Potree.Viewer.Profile(this, document.getElementById("profile_draw_container"));
-				
+
 				if(callback){
 					$(callback);
 				}
 			});
-			
+
 		});
-		
-		
-		
+
+
+
 	}
-    
+
     setLanguage(lang){
         i18n.setLng(lang);
         $("body").i18n();
-    }	
-	
+    }
+
 	initThree(){
 		let width = this.renderArea.clientWidth;
 		let height = this.renderArea.clientHeight;
 
 		this.renderer = new THREE.WebGLRenderer({premultipliedAlpha: false});
-        
+
 		this.renderer.setSize(width, height);
 		this.renderer.autoClear = false;
 		this.renderArea.appendChild(this.renderer.domElement);
@@ -13863,7 +13863,7 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		this.renderer.domElement.addEventListener("mousedown", function(){
 			this.renderer.domElement.focus();
 		}.bind(this));
-		
+
 		this.skybox = Potree.utils.loadSkybox(new URL(Potree.resourcePath + "/textures/skybox2/").href);
 
 		// enable frag_depth extension for the interpolation shader, if available
@@ -13873,29 +13873,29 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 	}
 
 	update(delta, timestamp){
-		
+
 		//if(window.urlToggle === undefined){
 		//	window.urlToggle = 0;
 		//}else{
-		//	
+		//
 		//	if(window.urlToggle > 1){
 		//		{
-		//			
+		//
 		//			let currentValue = Potree.utils.getParameterByName("position");
-		//			let strPosition = "["  
+		//			let strPosition = "["
 		//				+ this.scene.view.position.x.toFixed(3) + ";"
 		//				+ this.scene.view.position.y.toFixed(3) + ";"
 		//				+ this.scene.view.position.z.toFixed(3) + "]";
 		//			if(currentValue !== strPosition){
 		//				Potree.utils.setParameter("position", strPosition);
 		//			}
-		//			
+		//
 		//		}
-		//		
+		//
 		//		{
 		//			let currentValue = Potree.utils.getParameterByName("target");
 		//			let pivot = this.scene.view.getPivot();
-		//			let strTarget = "["  
+		//			let strTarget = "["
 		//				+ pivot.x.toFixed(3) + ";"
 		//				+ pivot.y.toFixed(3) + ";"
 		//				+ pivot.z.toFixed(3) + "]";
@@ -13903,32 +13903,32 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		//				Potree.utils.setParameter("target", strTarget);
 		//			}
 		//		}
-		//		
+		//
 		//		window.urlToggle = 0;
 		//	}
-		//	
+		//
 		//	window.urlToggle += delta;
 		//}
-		
-		
-		
-		
+
+
+
+
 		let scene = this.scene;
 		let camera = this.scene.camera;
-		
+
 		Potree.pointLoadLimit = Potree.pointBudget * 2;
-		
+
 		this.scene.directionalLight.position.copy(camera.position);
 		this.scene.directionalLight.lookAt(new THREE.Vector3().addVectors(camera.position, camera.getWorldDirection()));
-		
+
 		var visibleNodes = 0;
 		var visiblePoints = 0;
 		var progress = 0;
-		
+
 		for(var i = 0; i < this.scene.pointclouds.length; i++){
 			var pointcloud = this.scene.pointclouds[i];
 			var bbWorld = Potree.utils.computeTransformedBoundingBox(pointcloud.boundingBox, pointcloud.matrixWorld);
-				
+
 			if(!this.intensityMax){
 				var root = pointcloud.pcoGeometry.root;
 				if(root != null && root.loaded){
@@ -13955,11 +13955,11 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 					}
 				}
 			}
-			
+
 			//if(this.heightMin === null){
 			//	this.setHeightRange(bbWorld.min.y, bbWorld.max.y);
 			//}
-				
+
 			pointcloud.material.clipMode = this.clipMode;
 			pointcloud.material.heightMin = this.heightMin;
 			pointcloud.material.heightMax = this.heightMax;
@@ -13976,14 +13976,14 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			pointcloud.generateDEM = this.useDEMCollisions;
 			pointcloud.minimumNodePixelSize = this.minNodeSize;
 			pointcloud.material.uniforms.transition.value = this.materialTransition;
-			
+
 			pointcloud.material.uniforms.wRGB.value = this.getWeightRGB();
 			pointcloud.material.uniforms.wIntensity.value = this.getWeightIntensity();
 			pointcloud.material.uniforms.wElevation.value = this.getWeightElevation();
 			pointcloud.material.uniforms.wClassification.value = this.getWeightClassification();
 			pointcloud.material.uniforms.wReturnNumber.value = this.getWeightReturnNumber();
 			pointcloud.material.uniforms.wSourceID.value = this.getWeightSourceID();
-			
+
 			//if(!this.freeze){
 			//	pointcloud.update(this.scene.camera, this.renderer);
 			//}
@@ -13993,7 +13993,7 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 
 			progress += pointcloud.progress;
 		}
-		
+
 		if(!this.freeze){
 			var result = Potree.updatePointClouds(scene.pointclouds, camera, this.renderer);
 			visibleNodes = result.visibleNodes.length;
@@ -14002,8 +14002,8 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			camera.far = -this.getBoundingBox().applyMatrix4(camera.matrixWorldInverse).min.z;
 			camera.far = Math.max(camera.far * 1.5, 1000);
 		}
-		
-		
+
+
 		//if(this.stats && this.showStats){
 		//	document.getElementById("lblNumVisibleNodes").style.display = "";
 		//	document.getElementById("lblNumVisiblePoints").style.display = "";
@@ -14018,16 +14018,16 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		//	document.getElementById("lblNumVisiblePoints").style.display = "none";
 		//	this.stats.domElement.style.display = "none";
 		//}
-		
+
 		camera.fov = this.fov;
-		
+
 		// Navigation mode changed?
 		if(this.getControls(scene.view.navigationMode) !== this.controls){
 			if(this.controls){
 				this.controls.enabled = false;
 				this.inputHandler.removeInputListener(this.controls);
 			}
-			
+
 			this.controls = this.getControls(scene.view.navigationMode);
 			this.controls.enabled = true;
 			this.inputHandler.addInputListener(this.controls);
@@ -14036,11 +14036,11 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		if(this.controls !== null){
 			this.controls.setScene(scene);
 			this.controls.update(delta);
-			
+
 			camera.position.copy(scene.view.position);
 			//camera.rotation.x = scene.view.pitch;
 			//camera.rotation.y = scene.view.yaw;
-			
+
 			//camera.lookAt(scene.view.getPivot());
 			camera.rotation.order = "ZXY";
 			camera.rotation.x = Math.PI / 2 + this.scene.view.pitch;
@@ -14050,20 +14050,20 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		{ // update clip boxes
 			//let boxes = this.scene.profiles.reduce( (a, b) => {return a.boxes.concat(b.boxes)}, []);
 			//boxes = boxes.concat(this.scene.volumes.filter(v => v.clip));
-			
+
 			let boxes = this.scene.volumes.filter(v => v.clip);
 			for(let profile of this.scene.profiles){
 				boxes = boxes.concat(profile.boxes);
 			}
-			
-			
+
+
 			let clipBoxes = boxes.map( box => {
 				box.updateMatrixWorld();
 				let boxInverse = new THREE.Matrix4().getInverse(box.matrixWorld);
 				let boxPosition = box.getWorldPosition();
 				return {inverse: boxInverse, position: boxPosition};
 			});
-			
+
 			for(let pointcloud of this.scene.pointclouds){
 				pointcloud.material.setClipBoxes(clipBoxes);
 			}
@@ -14073,15 +14073,15 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			var distances = [];
 			for(let ann of this.scene.annotations){
 				var screenPos = ann.position.clone().project(this.scene.camera);
-				
+
 				screenPos.x = this.renderArea.clientWidth * (screenPos.x + 1) / 2;
 				screenPos.y = this.renderArea.clientHeight * (1 - (screenPos.y + 1) / 2);
-				
+
 				ann.domElement.style.left = Math.floor(screenPos.x - ann.domElement.clientWidth / 2) + "px";
 				ann.domElement.style.top = Math.floor(screenPos.y - ann.elOrdinal.clientHeight / 2) + "px";
-				
-				
-				
+
+
+
 				distances.push({annotation: ann, distance: screenPos.z});
 
 				if(-1 > screenPos.z || screenPos.z > 1){
@@ -14090,9 +14090,9 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 					ann.domElement.style.display = "initial";
 				}
 			}
-			
+
 			distances.sort(function(a,b){return b.distance - a.distance});
-			
+
 			for(var i = 0; i < distances.length; i++){
 				var ann = distances[i].annotation;
 				ann.domElement.style.zIndex = "" + i;
@@ -14101,15 +14101,15 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 				}
 			}
 		}
-		
+
 		if(this.showDebugInfos){
-			this.infos.set("camera.position", "camera.position: " + 
-				this.scene.camera.position.x.toFixed(2) 
-				+ ", " + this.scene.camera.position.y.toFixed(2) 
+			this.infos.set("camera.position", "camera.position: " +
+				this.scene.camera.position.x.toFixed(2)
+				+ ", " + this.scene.camera.position.y.toFixed(2)
 				+ ", " + this.scene.camera.position.z.toFixed(2)
 			);
 		}
-		
+
 		if(this.mapView){
 			this.mapView.update(delta, this.scene.camera);
 			if(this.mapView.sceneProjection){
@@ -14118,20 +14118,20 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		}
 
 		TWEEN.update(timestamp);
-		
+
 		this.dispatchEvent({
-			"type": "update", 
-			"delta": delta, 
+			"type": "update",
+			"delta": delta,
 			"timestamp": timestamp});
 	}
 
 
 	loop(timestamp) {
-		
+
 		requestAnimationFrame(this.loop.bind(this));
-		
+
 		this.stats.begin();
-		
+
 		//var start = new Date().getTime();
 		this.update(this.clock.getDelta(), timestamp);
 		//var end = new Date().getTime();
@@ -14141,14 +14141,14 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 		//	document.getElementById("lblMessage").innerHTML = "update: " + duration + "ms";
 		//	toggleMessage = 0;
 		//}
-		
+
 		let queryAll = Potree.startQuery("All", viewer.renderer.getContext());
-		
+
 		if(this.useEDL && Potree.Features.SHADER_EDL.isSupported()){
             if(this.useVR)
             {
                 if(!this.edlVRRenderer ){
-				    this.edlVRRenderer = new EDLVRRenderer(this,this.camera,this.effect,this.vrcontroller);
+				    this.edlVRRenderer = new EDLVRRenderer(this,this.effect,this.vrcontroller);
 			    }
 			    this.edlVRRenderer.render(this.renderer);
             }
@@ -14164,7 +14164,7 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
             if(this.useVR)
             {
                 if(!this.highQualityVRenderer){
-				    this.highQualityVRRenderer = new HighQualityVRRenderer(this,this.camera,this.effect,this.vrcontroller);
+				    this.highQualityVRRenderer = new HighQualityVRRenderer(this,this.effect,this.vrcontroller);
 			    }
 			    this.highQualityVRRenderer.render(this.renderer);
             }
@@ -14179,9 +14179,8 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
             if(this.useVR)
             {
                 if(!this.potreeVRRenderer){
-				    this.potreeVRRenderer = new PotreeVRRenderer(this,this.camera,this.effect,this.vrcontroller);
+				    this.potreeVRRenderer = new PotreeVRRenderer(this,this.effect,this.vrcontroller);
 			    }
-			
 			    this.potreeVRRenderer.render();
             }
             else
@@ -14192,27 +14191,27 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 			    this.potreeRenderer.render();
             }
 		}
-		
+
 		Potree.endQuery(queryAll, viewer.renderer.getContext());
 		Potree.resolveQueries(viewer.renderer.getContext());
-		
+
 		//if(this.takeScreenshot == true){
 		//	this.takeScreenshot = false;
-		//	
+		//
 		//	var screenshot = this.renderer.domElement.toDataURL();
-		//	
-		//	//document.body.appendChild(screenshot); 
+		//
+		//	//document.body.appendChild(screenshot);
 		//	var w = this.open();
 		//	w.document.write('<img src="'+screenshot+'"/>');
-		//}	
-		
+		//}
+
 		this.stats.end();
 
-		
+
 		Potree.framenumber++;
 	};
 
-	
+
 };
 
 
@@ -14226,160 +14225,160 @@ Potree.Viewer = class PotreeViewer extends THREE.EventDispatcher{
 //------------------------------------------------------------------------------------
 
 class PotreeRenderer{
-	
+
 	constructor(viewer){
 		this.viewer = viewer;
         ;
-        
+
 	};
 
 	render(){
 
         ;
-                
+
 
 		{// resize
 			let width = viewer.scaleFactor * viewer.renderArea.clientWidth;
 			let height = viewer.scaleFactor * viewer.renderArea.clientHeight;
 			let aspect = width / height;
-			
+
 			viewer.scene.camera.aspect = aspect;
 			viewer.scene.camera.updateProjectionMatrix();
-			
+
 			viewer.renderer.setSize(width, height);
 		}
-		
+
 		if(Potree.framenumber > 20 && false){
-			
+
 			if(Potree.__dems === undefined){
 				Potree.__dems = {};
-				Potree.__dems.targetElevation = new THREE.WebGLRenderTarget( 128, 128, { 
-					minFilter: THREE.NearestFilter, 
-					magFilter: THREE.NearestFilter, 
+				Potree.__dems.targetElevation = new THREE.WebGLRenderTarget( 128, 128, {
+					minFilter: THREE.NearestFilter,
+					magFilter: THREE.NearestFilter,
 					format: THREE.RGBAFormat
 				} );
-				
-				Potree.__dems.targetMedian = new THREE.WebGLRenderTarget( 128, 128, { 
-					minFilter: THREE.NearestFilter, 
-					magFilter: THREE.NearestFilter, 
+
+				Potree.__dems.targetMedian = new THREE.WebGLRenderTarget( 128, 128, {
+					minFilter: THREE.NearestFilter,
+					magFilter: THREE.NearestFilter,
 					format: THREE.RGBAFormat
 				} );
-				
+
 				Potree.__dems.camera = new THREE.OrthographicCamera(0, 1, 1, 0, 0, 1);
-				
+
 				// VERTEX SHADER
 				let vsElevation = `
 					precision mediump float;
 					precision mediump int;
-					
+
 					attribute vec3 position;
-					
+
 					uniform mat4 modelMatrix;
 					uniform mat4 modelViewMatrix;
 					uniform mat4 projectionMatrix;
-					
+
 					varying float vElevation;
-					
+
 					void main(){
 						vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 						gl_Position = projectionMatrix * mvPosition;
 						gl_PointSize = 1.0;
-						
+
 						vElevation = position.z;
 					}
 				`;
-				
+
 				// FRAGMENT SHADER
 				let fsElevation = `
 					precision mediump float;
 					precision mediump int;
-					
+
 					varying float vElevation;
-					
+
 					void main(){
 						gl_FragColor = vec4(vElevation / 50.0, 0.0, 0.0, 1.0);
 					}
 				`;
-				
+
 				let vsMedian = `
 					precision mediump float;
 					precision mediump int;
-					
+
 					attribute vec3 position;
 					attribute vec2 uv;
-					
+
 					uniform mat4 modelMatrix;
 					uniform mat4 modelViewMatrix;
 					uniform mat4 projectionMatrix;
-				
+
 					varying vec2 vUV;
 
 					void main() {
 						vUV = uv;
-						
+
 						vec4 mvPosition = modelViewMatrix * vec4(position,1.0);
 
 						gl_Position = projectionMatrix * mvPosition;
 					}
 				`;
-				
+
 				let fsMedian = `
-				
+
 					precision mediump float;
 					precision mediump int;
-					
+
 					uniform float uWidth;
-					uniform float uHeight;					
+					uniform float uHeight;
 					uniform sampler2D uTexture;
 
 					varying vec2 vUV;
-					
+
 					void main(){
-						vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);						
-						
+						vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
+
 						vec4 color = texture2D(uTexture, uv);
 						gl_FragColor = color;
                         if(color.a == 0.0){
-							
+
                             vec4 sum;
-                            
+
                             float minVal = 1.0 / 0.0;
-                            
+
                             float sumA = 0.0;
 							for(int i = -1; i <= 1; i++){
 								for(int j = -1; j <= 1; j++){
 									vec2 n = gl_FragCoord.xy + vec2(i, j);
-                                    vec2 uv = n / vec2(uWidth, uHeight);	
+                                    vec2 uv = n / vec2(uWidth, uHeight);
                                     vec4 c = texture2D(uTexture, uv);
-                                    
+
                                     if(c.a == 1.0){
                                     	minVal = min(c.r, minVal);
                                     }
-                                    
+
                                     sumA += c.a;
 								}
 							}
-                            
+
                             if(sumA > 0.0){
                             	gl_FragColor = vec4(minVal, 0.0, 0.0, 1.0);
                             }else{
-                            	discard;   
+                            	discard;
                             }
 						}else{
 							//gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
 							gl_FragColor = vec4(color.rgb, 1.0);
 						}
-						
-						
+
+
 					}
-				
+
 				`;
-				
+
 				Potree.__dems.elevationMaterial = new THREE.RawShaderMaterial( {
 					vertexShader: vsElevation,
 					fragmentShader: fsElevation,
 				} );
-				
+
 				Potree.__dems.medianFilterMaterial = new THREE.RawShaderMaterial( {
 					uniforms: {
 						uWidth: {value: 1.0},
@@ -14389,7 +14388,7 @@ class PotreeRenderer{
 					vertexShader: vsMedian,
 					fragmentShader: fsMedian,
 				} );
-				
+
 			}
 			let dems = Potree.__dems;
 			let camera = dems.camera;
@@ -14400,8 +14399,8 @@ class PotreeRenderer{
 			let node = viewer.scene.pointclouds[0].root;
 			if(node.geometryNode){
 				let box = node.geometryNode.boundingBox;
-				
-				
+
+
 				camera.up.set(0, 0, 1);
 				//camera.rotation.x = Math.PI / 2;
 				camera.left = box.min.x;
@@ -14411,29 +14410,29 @@ class PotreeRenderer{
 				camera.near = -1000;
 				camera.far = 1000;
 				camera.updateProjectionMatrix();
-				
+
 				let scene = new THREE.Scene();
 				//let material = new THREE.PointsMaterial({color: 0x00ff00, size: 0.0001});
 				let material = dems.elevationMaterial;
 				let pointcloud = new THREE.Points(node.geometryNode.geometry, material);
 				scene.add(pointcloud);
-				
-				
+
+
 				viewer.renderer.render(pointcloud, camera, dems.targetElevation);
-				
+
 				dems.medianFilterMaterial.uniforms.uWidth.value = dems.targetMedian.width;
 				dems.medianFilterMaterial.uniforms.uHeight.value = dems.targetMedian.height;
 				dems.medianFilterMaterial.uniforms.uTexture.value = dems.targetElevation.texture;
-				
+
 				Potree.utils.screenPass.render(viewer.renderer, dems.medianFilterMaterial, dems.targetMedian);
 
 				plane.material = new THREE.MeshBasicMaterial({map: dems.targetMedian.texture});
 			}
 		}
-		
+
 
 		//var queryAll = Potree.startQuery("All", viewer.renderer.getContext());
-		
+
 		// render skybox
 		if(viewer.background === "skybox"){
 			viewer.renderer.clear(true, true, false);
@@ -14452,17 +14451,17 @@ class PotreeRenderer{
 			viewer.renderer.setClearColor(0xFFFFFF, 1);
 			viewer.renderer.clear(true, true, false);
 		}
-		
-		
-		
+
+
+
 		for(let i = 0; i < viewer.scene.pointclouds.length; i++){
 			let pointcloud = viewer.scene.pointclouds[i];
 			if(pointcloud.originalMaterial){
 				pointcloud.material = pointcloud.originalMaterial;
 			}
-			
+
 			let bbWorld = Potree.utils.computeTransformedBoundingBox(pointcloud.boundingBox, pointcloud.matrixWorld);
-			
+
 			pointcloud.material.useEDL = false;
 			pointcloud.material.size = viewer.pointSize;
 			pointcloud.material.minSize = viewer.minPointSize;
@@ -14474,191 +14473,191 @@ class PotreeRenderer{
 			pointcloud.material.interpolate = (viewer.quality === "Interpolation");
 			pointcloud.material.weighted = false;
 		}
-		
-		
+
+
 		//var queryPC = Potree.startQuery("PointCloud", viewer.renderer.getContext());
 		viewer.renderer.render(viewer.scene.scenePointCloud, viewer.scene.camera);
 		//Potree.endQuery(queryPC, viewer.renderer.getContext());
-		
+
 		// render scene
 		viewer.renderer.render(viewer.scene.scene, viewer.scene.camera);
-		
+
 		viewer.volumeTool.update();
 		viewer.renderer.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
 		viewer.renderer.render(viewer.controls.sceneControls, viewer.scene.camera);
-		
+
 		viewer.renderer.clearDepth();
-		
+
 		viewer.measuringTool.update();
 		viewer.profileTool.update();
 		viewer.transformationTool.update();
-		
+
 		viewer.renderer.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
 		viewer.renderer.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
 		viewer.renderer.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
-		
-		
+
+
 		//Potree.endQuery(queryAll, viewer.renderer.getContext());
-		
+
 		//Potree.resolveQueries(viewer.renderer.getContext());
 	};
 };
 
 class PotreeVRRenderer{
-	
-	constructor(viewer,camera,effect,controls){
+
+	constructor(viewer,effect,controls){
 		this.viewer = viewer;
         this.controls = controls;
-		this.effect = effect;        
+		this.effect = effect;
 	};
 
 	render(){
 
-        if(this.controls!=null){this.controls.update();}        
+        if(this.controls!=null){this.controls.update();}
 
 		{// resize
 			let width = viewer.scaleFactor * viewer.renderArea.clientWidth;
 			let height = viewer.scaleFactor * viewer.renderArea.clientHeight;
 			let aspect = width / height;
-			
+
 			viewer.scene.camera.aspect = aspect;
 			viewer.scene.camera.updateProjectionMatrix();
-			
+
 			viewer.renderer.setSize(width, height);
             this.effect.setSize(width, height);
 		}
-		
+
 		if(Potree.framenumber > 20 && false){
-			
+
 			if(Potree.__dems === undefined){
 				Potree.__dems = {};
-				Potree.__dems.targetElevation = new THREE.WebGLRenderTarget( 128, 128, { 
-					minFilter: THREE.NearestFilter, 
-					magFilter: THREE.NearestFilter, 
+				Potree.__dems.targetElevation = new THREE.WebGLRenderTarget( 128, 128, {
+					minFilter: THREE.NearestFilter,
+					magFilter: THREE.NearestFilter,
 					format: THREE.RGBAFormat
 				} );
-				
-				Potree.__dems.targetMedian = new THREE.WebGLRenderTarget( 128, 128, { 
-					minFilter: THREE.NearestFilter, 
-					magFilter: THREE.NearestFilter, 
+
+				Potree.__dems.targetMedian = new THREE.WebGLRenderTarget( 128, 128, {
+					minFilter: THREE.NearestFilter,
+					magFilter: THREE.NearestFilter,
 					format: THREE.RGBAFormat
 				} );
-				
+
 				Potree.__dems.camera = new THREE.OrthographicCamera(0, 1, 1, 0, 0, 1);
-				
+
 				// VERTEX SHADER
 				let vsElevation = `
 					precision mediump float;
 					precision mediump int;
-					
+
 					attribute vec3 position;
-					
+
 					uniform mat4 modelMatrix;
 					uniform mat4 modelViewMatrix;
 					uniform mat4 projectionMatrix;
-					
+
 					varying float vElevation;
-					
+
 					void main(){
 						vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 						gl_Position = projectionMatrix * mvPosition;
 						gl_PointSize = 1.0;
-						
+
 						vElevation = position.z;
 					}
 				`;
-				
+
 				// FRAGMENT SHADER
 				let fsElevation = `
 					precision mediump float;
 					precision mediump int;
-					
+
 					varying float vElevation;
-					
+
 					void main(){
 						gl_FragColor = vec4(vElevation / 50.0, 0.0, 0.0, 1.0);
 					}
 				`;
-				
+
 				let vsMedian = `
 					precision mediump float;
 					precision mediump int;
-					
+
 					attribute vec3 position;
 					attribute vec2 uv;
-					
+
 					uniform mat4 modelMatrix;
 					uniform mat4 modelViewMatrix;
 					uniform mat4 projectionMatrix;
-				
+
 					varying vec2 vUV;
 
 					void main() {
 						vUV = uv;
-						
+
 						vec4 mvPosition = modelViewMatrix * vec4(position,1.0);
 
 						gl_Position = projectionMatrix * mvPosition;
 					}
 				`;
-				
+
 				let fsMedian = `
-				
+
 					precision mediump float;
 					precision mediump int;
-					
+
 					uniform float uWidth;
-					uniform float uHeight;					
+					uniform float uHeight;
 					uniform sampler2D uTexture;
 
 					varying vec2 vUV;
-					
+
 					void main(){
-						vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);						
-						
+						vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
+
 						vec4 color = texture2D(uTexture, uv);
 						gl_FragColor = color;
                         if(color.a == 0.0){
-							
+
                             vec4 sum;
-                            
+
                             float minVal = 1.0 / 0.0;
-                            
+
                             float sumA = 0.0;
 							for(int i = -1; i <= 1; i++){
 								for(int j = -1; j <= 1; j++){
 									vec2 n = gl_FragCoord.xy + vec2(i, j);
-                                    vec2 uv = n / vec2(uWidth, uHeight);	
+                                    vec2 uv = n / vec2(uWidth, uHeight);
                                     vec4 c = texture2D(uTexture, uv);
-                                    
+
                                     if(c.a == 1.0){
                                     	minVal = min(c.r, minVal);
                                     }
-                                    
+
                                     sumA += c.a;
 								}
 							}
-                            
+
                             if(sumA > 0.0){
                             	gl_FragColor = vec4(minVal, 0.0, 0.0, 1.0);
                             }else{
-                            	discard;   
+                            	discard;
                             }
 						}else{
 							//gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
 							gl_FragColor = vec4(color.rgb, 1.0);
 						}
-						
-						
+
+
 					}
-				
+
 				`;
-				
+
 				Potree.__dems.elevationMaterial = new THREE.RawShaderMaterial( {
 					vertexShader: vsElevation,
 					fragmentShader: fsElevation,
 				} );
-				
+
 				Potree.__dems.medianFilterMaterial = new THREE.RawShaderMaterial( {
 					uniforms: {
 						uWidth: {value: 1.0},
@@ -14668,7 +14667,7 @@ class PotreeVRRenderer{
 					vertexShader: vsMedian,
 					fragmentShader: fsMedian,
 				} );
-				
+
 			}
 			let dems = Potree.__dems;
 			let camera = dems.camera;
@@ -14679,8 +14678,8 @@ class PotreeVRRenderer{
 			let node = viewer.scene.pointclouds[0].root;
 			if(node.geometryNode){
 				let box = node.geometryNode.boundingBox;
-				
-				
+
+
 				camera.up.set(0, 0, 1);
 				//camera.rotation.x = Math.PI / 2;
 				camera.left = box.min.x;
@@ -14690,31 +14689,31 @@ class PotreeVRRenderer{
 				camera.near = -1000;
 				camera.far = 1000;
 				camera.updateProjectionMatrix();
-				
+
 				let scene = new THREE.Scene();
 				//let material = new THREE.PointsMaterial({color: 0x00ff00, size: 0.0001});
 				let material = dems.elevationMaterial;
 				let pointcloud = new THREE.Points(node.geometryNode.geometry, material);
 				scene.add(pointcloud);
-				
-				
+
+
 				viewer.renderer.render(pointcloud, camera, dems.targetElevation);
                 this.effect.render(pointcloud, camera, dems.targetElevation);
-				
+
 				dems.medianFilterMaterial.uniforms.uWidth.value = dems.targetMedian.width;
 				dems.medianFilterMaterial.uniforms.uHeight.value = dems.targetMedian.height;
 				dems.medianFilterMaterial.uniforms.uTexture.value = dems.targetElevation.texture;
-				
+
 				//Potree.utils.screenPass.render(viewer.renderer, dems.medianFilterMaterial, dems.targetMedian);
                 Potree.utils.screenPass.render(this.effect, dems.medianFilterMaterial, dems.targetMedian);
 
 				plane.material = new THREE.MeshBasicMaterial({map: dems.targetMedian.texture});
 			}
 		}
-		
+
 
 		//var queryAll = Potree.startQuery("All", viewer.renderer.getContext());
-		
+
 		// render skybox
 		if(viewer.background === "skybox"){
 			viewer.renderer.clear(true, true, false);
@@ -14725,7 +14724,7 @@ class PotreeVRRenderer{
 			//viewer.renderer.render(viewer.skybox.scene, viewer.skybox.camera);
             this.effect.render(viewer.skybox.scene, viewer.skybox.camera);
 		}else if(viewer.background === "gradient"){
-			//viewer.renderer.clear(true, true, false);
+			viewer.renderer.clear(true, true, false);
 			//viewer.renderer.render(viewer.scene.sceneBG, viewer.scene.cameraBG);
             this.effect.render(viewer.scene.sceneBG, viewer.scene.cameraBG);
 		}else if(viewer.background === "black"){
@@ -14735,17 +14734,17 @@ class PotreeVRRenderer{
 			viewer.renderer.setClearColor(0xFFFFFF, 1);
 			viewer.renderer.clear(true, true, false);
 		}
-		
-		
-		
+
+
+
 		for(let i = 0; i < viewer.scene.pointclouds.length; i++){
 			let pointcloud = viewer.scene.pointclouds[i];
 			if(pointcloud.originalMaterial){
 				pointcloud.material = pointcloud.originalMaterial;
 			}
-			
+
 			let bbWorld = Potree.utils.computeTransformedBoundingBox(pointcloud.boundingBox, pointcloud.matrixWorld);
-			
+
 			pointcloud.material.useEDL = false;
 			pointcloud.material.size = viewer.pointSize;
 			pointcloud.material.minSize = viewer.minPointSize;
@@ -14757,30 +14756,30 @@ class PotreeVRRenderer{
 			pointcloud.material.interpolate = (viewer.quality === "Interpolation");
 			pointcloud.material.weighted = false;
 		}
-		
-		
+
+
 		//var queryPC = Potree.startQuery("PointCloud", viewer.renderer.getContext());
 		//viewer.renderer.render(viewer.scene.scenePointCloud, viewer.scene.camera);
         this.effect.render(viewer.scene.scenePointCloud, viewer.scene.camera);
 		//Potree.endQuery(queryPC, viewer.renderer.getContext());
-		
+
 		// render scene
 		//viewer.renderer.render(viewer.scene.scene, viewer.scene.camera);
         this.effect.render(viewer.scene.scene, viewer.scene.camera);
-		
+
 		viewer.volumeTool.update();
 		//viewer.renderer.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
 		//viewer.renderer.render(viewer.controls.sceneControls, viewer.scene.camera);
 
         this.effect.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
 		this.effect.render(viewer.controls.sceneControls, viewer.scene.camera);
-		
+
 		viewer.renderer.clearDepth();
-		
+
 		viewer.measuringTool.update();
 		viewer.profileTool.update();
 		viewer.transformationTool.update();
-		
+
 		//viewer.renderer.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
 		//viewer.renderer.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
 		//viewer.renderer.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
@@ -14788,89 +14787,89 @@ class PotreeVRRenderer{
         this.effect.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
 		this.effect.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
 		this.effect.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
-		
-		
+
+
 		//Potree.endQuery(queryAll, viewer.renderer.getContext());
-		
+
 		//Potree.resolveQueries(viewer.renderer.getContext());
 	};
 };
 
 // high quality rendering using splats
 class HighQualityRenderer{
-	
+
 	constructor(viewer){
-        
+
 		this.viewer = viewer;
-		
+
 		this.depthMaterial = null;
 		this.attributeMaterial = null;
 		this.normalizationMaterial = null;
-		
+
 		this.rtDepth;
 		this.rtNormalize;
 	};
 
-	
-	
+
+
 	initHQSPlats(){
 		if(this.depthMaterial != null){
 			return;
 		}
-	
+
 		this.depthMaterial = new Potree.PointCloudMaterial();
 		this.attributeMaterial = new Potree.PointCloudMaterial();
-	
+
 		this.depthMaterial.pointColorType = Potree.PointColorType.DEPTH;
 		this.depthMaterial.pointShape = Potree.PointShape.CIRCLE;
 		this.depthMaterial.interpolate = false;
 		this.depthMaterial.weighted = false;
 		this.depthMaterial.minSize = viewer.minPointSize;
 		this.depthMaterial.maxSize = viewer.maxPointSize;
-					
+
 		this.attributeMaterial.pointShape = Potree.PointShape.CIRCLE;
 		this.attributeMaterial.interpolate = false;
 		this.attributeMaterial.weighted = true;
 		this.attributeMaterial.minSize = viewer.minPointSize;
 		this.attributeMaterial.maxSize = viewer.maxPointSize;
 
-		this.rtDepth = new THREE.WebGLRenderTarget( 1024, 1024, { 
-			minFilter: THREE.NearestFilter, 
-			magFilter: THREE.NearestFilter, 
-			format: THREE.RGBAFormat, 
+		this.rtDepth = new THREE.WebGLRenderTarget( 1024, 1024, {
+			minFilter: THREE.NearestFilter,
+			magFilter: THREE.NearestFilter,
+			format: THREE.RGBAFormat,
 			type: THREE.FloatType
 		} );
 
-		this.rtNormalize = new THREE.WebGLRenderTarget( 1024, 1024, { 
-			minFilter: THREE.LinearFilter, 
-			magFilter: THREE.NearestFilter, 
-			format: THREE.RGBAFormat, 
+		this.rtNormalize = new THREE.WebGLRenderTarget( 1024, 1024, {
+			minFilter: THREE.LinearFilter,
+			magFilter: THREE.NearestFilter,
+			format: THREE.RGBAFormat,
 			type: THREE.FloatType
 		} );
-		
+
 		var uniformsNormalize = {
 			depthMap: { type: "t", value: this.rtDepth },
 			texture: { type: "t", value: this.rtNormalize }
 		};
-		
+
 		this.normalizationMaterial = new THREE.ShaderMaterial({
 			uniforms: uniformsNormalize,
 			vertexShader: Potree.Shaders["normalize.vs"],
 			fragmentShader: Potree.Shaders["normalize.fs"]
 		});
 	};
-	
+
 	resize(width, height){
 		if(this.rtDepth.width == width && this.rtDepth.height == height){
 			return;
 		}
-		
+
 		this.rtDepth.dispose();
 		this.rtNormalize.dispose();
-		
+
 		viewer.scene.camera.aspect = width / height;
 		viewer.scene.camera.updateProjectionMatrix();
-		
+
 		viewer.renderer.setSize(width, height);
 		this.rtDepth.setSize(width, height);
 		this.rtNormalize.setSize(width, height);
@@ -14880,12 +14879,12 @@ class HighQualityRenderer{
 	render(renderer){
 		var width = viewer.renderArea.clientWidth;
 		var height = viewer.renderArea.clientHeight;
-	
+
 		this.initHQSPlats();
-		
+
 		this.resize(width, height);
-		
-		
+
+
 		viewer.renderer.clear();
 		if(viewer.background === "skybox"){
 			viewer.renderer.clear();
@@ -14904,16 +14903,16 @@ class HighQualityRenderer{
 			viewer.renderer.setClearColor(0xFFFFFF, 0);
 			viewer.renderer.clear();
 		}
-		
+
 		viewer.renderer.render(viewer.scene.scene, viewer.scene.camera);
-		
+
 		for(let pointcloud of viewer.scene.pointclouds){
-		
+
 			this.depthMaterial.uniforms.octreeSize.value = pointcloud.pcoGeometry.boundingBox.getSize().x;
 			this.attributeMaterial.uniforms.octreeSize.value = pointcloud.pcoGeometry.boundingBox.getSize().x;
-		
+
 			let originalMaterial = pointcloud.material;
-			
+
 			{// DEPTH PASS
 				this.depthMaterial.size = viewer.pointSize;
 				this.depthMaterial.pointSizeType = viewer.pointSizeType;
@@ -14932,13 +14931,13 @@ class HighQualityRenderer{
 				this.depthMaterial.bbSize = pointcloud.material.bbSize;
 				this.depthMaterial.treeType = pointcloud.material.treeType;
 				this.depthMaterial.uniforms.classificationLUT.value = pointcloud.material.uniforms.classificationLUT.value;
-				
+
 				viewer.scene.scenePointCloud.overrideMaterial = this.depthMaterial;
 				viewer.renderer.clearTarget( this.rtDepth, true, true, true );
 				viewer.renderer.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtDepth);
 				viewer.scene.scenePointCloud.overrideMaterial = null;
 			}
-			
+
 			{// ATTRIBUTE PASS
 				this.attributeMaterial.size = viewer.pointSize;
 				this.attributeMaterial.pointSizeType = viewer.pointSizeType;
@@ -14963,33 +14962,33 @@ class HighQualityRenderer{
 				this.attributeMaterial.bbSize = pointcloud.material.bbSize;
 				this.attributeMaterial.treeType = pointcloud.material.treeType;
 				this.attributeMaterial.uniforms.classificationLUT.value = pointcloud.material.uniforms.classificationLUT.value;
-				
+
 				viewer.scene.scenePointCloud.overrideMaterial = this.attributeMaterial;
 				viewer.renderer.clearTarget( this.rtNormalize, true, true, true );
 				viewer.renderer.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtNormalize);
 				viewer.scene.scenePointCloud.overrideMaterial = null;
-				
+
 				pointcloud.material = originalMaterial;
 			}
 		}
-		
+
 		if(viewer.scene.pointclouds.length > 0){
 			{// NORMALIZATION PASS
 				this.normalizationMaterial.uniforms.depthMap.value = this.rtDepth;
 				this.normalizationMaterial.uniforms.texture.value = this.rtNormalize;
 				Potree.utils.screenPass.render(viewer.renderer, this.normalizationMaterial);
 			}
-			
+
 			viewer.volumeTool.update();
 			viewer.renderer.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
 			viewer.renderer.render(viewer.controls.sceneControls, viewer.scene.camera);
-			
+
 			viewer.renderer.clearDepth();
-			
+
 			viewer.measuringTool.update();
 			viewer.profileTool.update();
 			viewer.transformationTool.update();
-			
+
 			viewer.renderer.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
 			viewer.renderer.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
 			viewer.renderer.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
@@ -15000,80 +14999,80 @@ class HighQualityRenderer{
 
 // high quality rendering using splats
 class HighQualityVRRenderer{
-	
-	constructor(viewer,camera,effect,controls){
+
+	constructor(viewer,effect,controls){
 		this.viewer = viewer;
         this.controls = controls;
-		this.effect = effect;        
+		this.effect = effect;
 
 		this.depthMaterial = null;
 		this.attributeMaterial = null;
-		this.normalizationMaterial = null;     
+		this.normalizationMaterial = null;
 
 		this.rtDepth;
 		this.rtNormalize;
 	};
 
-	
-	
+
+
 	initHQSPlats(){
 		if(this.depthMaterial != null){
 			return;
 		}
-	
+
 		this.depthMaterial = new Potree.PointCloudMaterial();
 		this.attributeMaterial = new Potree.PointCloudMaterial();
-	
+
 		this.depthMaterial.pointColorType = Potree.PointColorType.DEPTH;
 		this.depthMaterial.pointShape = Potree.PointShape.CIRCLE;
 		this.depthMaterial.interpolate = false;
 		this.depthMaterial.weighted = false;
 		this.depthMaterial.minSize = viewer.minPointSize;
 		this.depthMaterial.maxSize = viewer.maxPointSize;
-					
+
 		this.attributeMaterial.pointShape = Potree.PointShape.CIRCLE;
 		this.attributeMaterial.interpolate = false;
 		this.attributeMaterial.weighted = true;
 		this.attributeMaterial.minSize = viewer.minPointSize;
 		this.attributeMaterial.maxSize = viewer.maxPointSize;
 
-		this.rtDepth = new THREE.WebGLRenderTarget( 1024, 1024, { 
-			minFilter: THREE.NearestFilter, 
-			magFilter: THREE.NearestFilter, 
-			format: THREE.RGBAFormat, 
+		this.rtDepth = new THREE.WebGLRenderTarget( 1024, 1024, {
+			minFilter: THREE.NearestFilter,
+			magFilter: THREE.NearestFilter,
+			format: THREE.RGBAFormat,
 			type: THREE.FloatType
 		} );
 
-		this.rtNormalize = new THREE.WebGLRenderTarget( 1024, 1024, { 
-			minFilter: THREE.LinearFilter, 
-			magFilter: THREE.NearestFilter, 
-			format: THREE.RGBAFormat, 
+		this.rtNormalize = new THREE.WebGLRenderTarget( 1024, 1024, {
+			minFilter: THREE.LinearFilter,
+			magFilter: THREE.NearestFilter,
+			format: THREE.RGBAFormat,
 			type: THREE.FloatType
 		} );
-		
+
 		var uniformsNormalize = {
 			depthMap: { type: "t", value: this.rtDepth },
 			texture: { type: "t", value: this.rtNormalize }
 		};
-		
+
 		this.normalizationMaterial = new THREE.ShaderMaterial({
 			uniforms: uniformsNormalize,
 			vertexShader: Potree.Shaders["normalize.vs"],
 			fragmentShader: Potree.Shaders["normalize.fs"]
 		});
 	};
-	
+
 	resize(width, height){
 		if(this.rtDepth.width == width && this.rtDepth.height == height){
 			return;
 		}
-		
+
 		this.rtDepth.dispose();
 		this.rtNormalize.dispose();
-		
+
 		viewer.scene.camera.aspect = width / height;
 		viewer.scene.camera.updateProjectionMatrix();
-		
+
 		viewer.renderer.setSize(width, height);
         this.effect.setSize(width, height);
 		this.rtDepth.setSize(width, height);
@@ -15082,16 +15081,16 @@ class HighQualityVRRenderer{
 
 	// render with splats
 	render(renderer){
-        
+
 		var width = viewer.renderArea.clientWidth;
 		var height = viewer.renderArea.clientHeight;
-	
+
 		this.initHQSPlats();
-		
+
 		this.resize(width, height);
-		
+
         if(this.controls!=null){this.controls.update();}
-		
+
 		viewer.renderer.clear();
 		if(viewer.background === "skybox"){
 			viewer.renderer.clear();
@@ -15112,17 +15111,17 @@ class HighQualityVRRenderer{
 			viewer.renderer.setClearColor(0xFFFFFF, 0);
 			viewer.renderer.clear();
 		}
-		
+
 		viewer.renderer.render(viewer.scene.scene, viewer.scene.camera);
         this.effect.render(viewer.scene.scene, viewer.scene.camera);
-		
+
 		for(let pointcloud of viewer.scene.pointclouds){
-		
+
 			this.depthMaterial.uniforms.octreeSize.value = pointcloud.pcoGeometry.boundingBox.getSize().x;
 			this.attributeMaterial.uniforms.octreeSize.value = pointcloud.pcoGeometry.boundingBox.getSize().x;
-		
+
 			let originalMaterial = pointcloud.material;
-			
+
 			{// DEPTH PASS
 				this.depthMaterial.size = viewer.pointSize;
 				this.depthMaterial.pointSizeType = viewer.pointSizeType;
@@ -15141,14 +15140,14 @@ class HighQualityVRRenderer{
 				this.depthMaterial.bbSize = pointcloud.material.bbSize;
 				this.depthMaterial.treeType = pointcloud.material.treeType;
 				this.depthMaterial.uniforms.classificationLUT.value = pointcloud.material.uniforms.classificationLUT.value;
-				
+
 				viewer.scene.scenePointCloud.overrideMaterial = this.depthMaterial;
 				viewer.renderer.clearTarget( this.rtDepth, true, true, true );
 				viewer.renderer.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtDepth);
                 this.effect.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtDepth);
 				viewer.scene.scenePointCloud.overrideMaterial = null;
 			}
-			
+
 			{// ATTRIBUTE PASS
 				this.attributeMaterial.size = viewer.pointSize;
 				this.attributeMaterial.pointSizeType = viewer.pointSizeType;
@@ -15173,38 +15172,38 @@ class HighQualityVRRenderer{
 				this.attributeMaterial.bbSize = pointcloud.material.bbSize;
 				this.attributeMaterial.treeType = pointcloud.material.treeType;
 				this.attributeMaterial.uniforms.classificationLUT.value = pointcloud.material.uniforms.classificationLUT.value;
-				
+
 				viewer.scene.scenePointCloud.overrideMaterial = this.attributeMaterial;
 				viewer.renderer.clearTarget( this.rtNormalize, true, true, true );
 				viewer.renderer.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtNormalize);
                 this.effect.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtNormalize);
 				viewer.scene.scenePointCloud.overrideMaterial = null;
-				
+
 				pointcloud.material = originalMaterial;
 			}
 		}
-		
+
 		if(viewer.scene.pointclouds.length > 0){
 			{// NORMALIZATION PASS
 				this.normalizationMaterial.uniforms.depthMap.value = this.rtDepth;
 				this.normalizationMaterial.uniforms.texture.value = this.rtNormalize;
-				//Potree.utils.screenPass.render(viewer.renderer, this.normalizationMaterial);
+				Potree.utils.screenPass.render(viewer.renderer, this.normalizationMaterial);
                 Potree.utils.screenPass.render(this.effect, this.normalizationMaterial);
 			}
-			
+
 			viewer.volumeTool.update();
 			viewer.renderer.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
 			viewer.renderer.render(viewer.controls.sceneControls, viewer.scene.camera);
 
             this.effect.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
-            this.effect.render(viewer.controls.sceneControls, viewer.scene.camera);			
-            
+            this.effect.render(viewer.controls.sceneControls, viewer.scene.camera);
+
 			viewer.renderer.clearDepth();
-			
+
 			viewer.measuringTool.update();
 			viewer.profileTool.update();
 			viewer.transformationTool.update();
-			
+
 			viewer.renderer.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
 			viewer.renderer.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
 			viewer.renderer.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
@@ -15217,67 +15216,66 @@ class HighQualityVRRenderer{
 	}
 };
 
-
 class EDLRenderer{
-	
+
 	constructor(viewer){
-        
+
 		this.viewer = viewer;
-		
+
 		this.edlMaterial = null;
 		this.attributeMaterials = [];
-		
+
 		this.rtColor = null;
 		this.gl = viewer.renderer.context;
 	}
-	
+
 	initEDL(){
 		if(this.edlMaterial != null){
 			return;
 		}
-		
-		//var depthTextureExt = gl.getExtension("WEBGL_depth_texture"); 
-		
+
+		//var depthTextureExt = gl.getExtension("WEBGL_depth_texture");
+
 		this.edlMaterial = new Potree.EyeDomeLightingMaterial();
-		
-		this.rtColor = new THREE.WebGLRenderTarget( 1024, 1024, { 
-			minFilter: THREE.NearestFilter, 
-			magFilter: THREE.NearestFilter, 
-			format: THREE.RGBAFormat, 
+
+		this.rtColor = new THREE.WebGLRenderTarget( 1024, 1024, {
+			minFilter: THREE.NearestFilter,
+			magFilter: THREE.NearestFilter,
+			format: THREE.RGBAFormat,
 			type: THREE.FloatType
 		} );
 		this.rtColor.depthTexture = new THREE.DepthTexture();
         this.rtColor.depthTexture.type = THREE.UnsignedIntType;
-		
+
 	};
-	
+
 	resize(){
 		let width = viewer.scaleFactor * viewer.renderArea.clientWidth;
 		let height = viewer.scaleFactor * viewer.renderArea.clientHeight;
 		let aspect = width / height;
-		
+
 		var needsResize = (this.rtColor.width != width || this.rtColor.height != height);
-	
-		// disposal will be unnecessary once this fix made it into three.js master: 
+
+		// disposal will be unnecessary once this fix made it into three.js master:
 		// https://github.com/mrdoob/three.js/pull/6355
 		if(needsResize){
 			this.rtColor.dispose();
 		}
-		
+
 		viewer.scene.camera.aspect = aspect;
 		viewer.scene.camera.updateProjectionMatrix();
-		
+
 		viewer.renderer.setSize(width, height);
 		this.rtColor.setSize(width, height);
 	}
 
 	render(){
-	
+
 		this.initEDL();
-		
+
 		this.resize();
-		
-		
+
+
 		if(viewer.background === "skybox"){
 			viewer.renderer.clear();
 			viewer.skybox.camera.rotation.copy(viewer.scene.camera.rotation);
@@ -15295,21 +15293,21 @@ class EDLRenderer{
 			viewer.renderer.setClearColor(0xFFFFFF, 0);
 			viewer.renderer.clear();
 		}
-		
-		
+
+
 		viewer.renderer.render(viewer.scene.scene, viewer.scene.camera);
-		
+
 		viewer.renderer.clearTarget( this.rtColor, true, true, true );
-		
+
 		var originalMaterials = [];
 		for(var i = 0; i < viewer.scene.pointclouds.length; i++){
 			var pointcloud = viewer.scene.pointclouds[i];
 			var width = viewer.renderArea.clientWidth;
 			var height = viewer.renderArea.clientHeight;
-			
+
 			if(this.attributeMaterials.length <= i ){
 				var attributeMaterial = new Potree.PointCloudMaterial();
-					
+
 				attributeMaterial.pointShape = Potree.PointShape.CIRCLE;
 				attributeMaterial.interpolate = (viewer.quality === "Interpolation");
 				attributeMaterial.weighted = false;
@@ -15320,11 +15318,11 @@ class EDLRenderer{
 				this.attributeMaterials.push(attributeMaterial);
 			}
 			var attributeMaterial = this.attributeMaterials[i];
-		
+
 			var octreeSize = pointcloud.pcoGeometry.boundingBox.getSize().x;
-		
+
 			originalMaterials.push(pointcloud.material);
-			
+
 			{// COLOR & DEPTH PASS
 				attributeMaterial = pointcloud.material;
 				attributeMaterial.pointShape = Potree.PointShape.CIRCLE;
@@ -15334,7 +15332,7 @@ class EDLRenderer{
 				attributeMaterial.maxSize = viewer.maxPointSize;
 				attributeMaterial.useLogarithmicDepthBuffer = false;
 				attributeMaterial.useEDL = true;
-				
+
 				attributeMaterial.size = viewer.pointSize;
 				attributeMaterial.pointSizeType = viewer.pointSizeType;
 				attributeMaterial.screenWidth = width;
@@ -15355,7 +15353,7 @@ class EDLRenderer{
 				attributeMaterial.bbSize = pointcloud.material.bbSize;
 				attributeMaterial.treeType = pointcloud.material.treeType;
 				attributeMaterial.uniforms.classificationLUT.value = pointcloud.material.uniforms.classificationLUT.value;
-				
+
 				pointcloud.material = attributeMaterial;
 
 				for(var j = 0; j < pointcloud.visibleNodes.length; j++){
@@ -15367,19 +15365,19 @@ class EDLRenderer{
 					}
 				}
 			}
-			
+
 		}
-		
+
 		//var queryPC = Potree.startQuery("PointCloud", viewer.renderer.getContext());
 		viewer.renderer.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtColor);
 		viewer.renderer.render(viewer.scene.scene, viewer.scene.camera, this.rtColor);
 		//Potree.endQuery(queryPC, viewer.renderer.getContext());
-		
-		
+
+
 		// bit of a hack here. The EDL pass will mess up the text of the volume tool
 		// so volume tool is rendered again afterwards
 		//viewer.volumeTool.render(this.rtColor);
-				
+
 		for(var i = 0; i < viewer.scene.pointclouds.length; i++){
 			var pointcloud = viewer.scene.pointclouds[i];
 			var originalMaterial = originalMaterials[i];
@@ -15393,20 +15391,20 @@ class EDLRenderer{
 				}
 			}
 		}
-		
+
 		viewer.volumeTool.update();
 		viewer.renderer.render(viewer.volumeTool.sceneVolume, viewer.scene.camera, this.rtColor);
-			
+
 		if(viewer.scene.pointclouds.length > 0){
-			
+
 			//var ext = viewer.renderer.getContext().getExtension("EXT_disjoint_timer_query");
 			//if(window.timerQuery == null){
 			//	window.timerQuery = ext.createQueryEXT();
 			//	ext.beginQueryEXT(ext.TIME_ELAPSED_EXT, window.timerQuery);
 			//}
-			
+
 			//var query = Potree.startQuery("EDL", viewer.renderer.getContext());
-			
+
 			{ // EDL OCCLUSION PASS
 				this.edlMaterial.uniforms.screenWidth.value = width;
 				this.edlMaterial.uniforms.screenHeight.value = height;
@@ -15417,38 +15415,37 @@ class EDLRenderer{
 				this.edlMaterial.depthTest = true;
 				this.edlMaterial.depthWrite = true;
 				this.edlMaterial.transparent = true;
-			
+
 				Potree.utils.screenPass.render(viewer.renderer, this.edlMaterial);
-			}	
-			
-//			viewer.renderer.render(viewer.scene.scene, viewer.scene.camera);
-			
+			}
+
+            //viewer.renderer.render(viewer.scene.scene, viewer.scene.camera);
 			//Potree.endQuery(query, viewer.renderer.getContext());
 			//Potree.resolveQueries(viewer.renderer.getContext());
-			
-			
+
+
 			viewer.renderer.clearDepth();
 			//viewer.volumeTool.update();
 			//viewer.renderer.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
 			viewer.renderer.render(viewer.controls.sceneControls, viewer.scene.camera);
-			
-			
+
+
 			viewer.measuringTool.update();
 			viewer.profileTool.update();
 			viewer.transformationTool.update();
-			
+
 			viewer.renderer.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
 			viewer.renderer.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
 			viewer.renderer.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
-			
+
 			//viewer.profileTool.render();
 			//viewer.volumeTool.render();
 			//viewer.renderer.clearDepth();
 			//viewer.measuringTool.render();
 			//viewer.transformationTool.render();
 		}
-		
-		
+
+
 		//{
 		//	let renderer = viewer.renderer;
 		//	let pickWindowSize = 128;
@@ -15457,68 +15454,68 @@ class EDLRenderer{
 		//	let pixels = new Uint8Array(buffer);
 		//	let ibuffer = new Uint32Array(buffer);
 		//	renderer.context.readPixels(
-		//		800 - (pickWindowSize-1) / 2, 500 - (pickWindowSize-1) / 2, 
-		//		pickWindowSize, pickWindowSize, 
+		//		800 - (pickWindowSize-1) / 2, 500 - (pickWindowSize-1) / 2,
+		//		pickWindowSize, pickWindowSize,
 		//		renderer.context.RGBA, renderer.context.UNSIGNED_BYTE, pixels);
-		//		
+		//
 		//	console.log(pixels[i]);
 		//}
 
-		
+
 
 	}
 };
 
 class EDLVRRenderer{
-	
-	constructor(viewer,camera,effect,controls){
+
+	constructor(viewer,effect,controls){
 		this.viewer = viewer;
         this.controls = controls;
-		this.effect = effect;        
-        
+		this.effect = effect;
+
 		this.edlMaterial = null;
 		this.attributeMaterials = [];
 
 		this.rtColor = null;
 		this.gl = viewer.renderer.context;
 	}
-	
+
 	initEDL(){
 		if(this.edlMaterial != null){
 			return;
 		}
-		
-		//var depthTextureExt = gl.getExtension("WEBGL_depth_texture"); 
-		
+
+		//var depthTextureExt = gl.getExtension("WEBGL_depth_texture");
+
 		this.edlMaterial = new Potree.EyeDomeLightingMaterial();
-		
-		this.rtColor = new THREE.WebGLRenderTarget( 1024, 1024, { 
-			minFilter: THREE.NearestFilter, 
-			magFilter: THREE.NearestFilter, 
-			format: THREE.RGBAFormat, 
+
+		this.rtColor = new THREE.WebGLRenderTarget( 1024, 1024, {
+			minFilter: THREE.NearestFilter,
+			magFilter: THREE.NearestFilter,
+			format: THREE.RGBAFormat,
 			type: THREE.FloatType
 		} );
 		this.rtColor.depthTexture = new THREE.DepthTexture();
         this.rtColor.depthTexture.type = THREE.UnsignedIntType;
-		
+
 	};
-	
+
 	resize(){
 		let width = viewer.scaleFactor * viewer.renderArea.clientWidth;
 		let height = viewer.scaleFactor * viewer.renderArea.clientHeight;
 		let aspect = width / height;
-		
+
 		var needsResize = (this.rtColor.width != width || this.rtColor.height != height);
-	
-		// disposal will be unnecessary once this fix made it into three.js master: 
+
+		// disposal will be unnecessary once this fix made it into three.js master:
 		// https://github.com/mrdoob/three.js/pull/6355
 		if(needsResize){
 			this.rtColor.dispose();
 		}
-		
+
 		viewer.scene.camera.aspect = aspect;
 		viewer.scene.camera.updateProjectionMatrix();
-		
+
 		viewer.renderer.setSize(width, height);
         this.effect.setSize(width, height);
 		this.rtColor.setSize(width, height);
@@ -15527,11 +15524,11 @@ class EDLVRRenderer{
 	render(){
 
 		this.initEDL();
-		
+
 		this.resize();
-		
+
         if(this.controls!=null){this.controls.update();}
-		
+
 		if(viewer.background === "skybox"){
 			viewer.renderer.clear();
 			viewer.skybox.camera.rotation.copy(viewer.scene.camera.rotation);
@@ -15551,22 +15548,22 @@ class EDLVRRenderer{
 			viewer.renderer.setClearColor(0xFFFFFF, 0);
 			viewer.renderer.clear();
 		}
-		
-		
-		viewer.renderer.render(viewer.scene.scene, viewer.scene.camera);
+
+
+		//viewer.renderer.render(viewer.scene.scene, viewer.scene.camera);
         this.effect.render(viewer.scene.scene, viewer.scene.camera);
-		
+
 		viewer.renderer.clearTarget( this.rtColor, true, true, true );
-		
+
 		var originalMaterials = [];
 		for(var i = 0; i < viewer.scene.pointclouds.length; i++){
 			var pointcloud = viewer.scene.pointclouds[i];
 			var width = viewer.renderArea.clientWidth;
 			var height = viewer.renderArea.clientHeight;
-			
+
 			if(this.attributeMaterials.length <= i ){
 				var attributeMaterial = new Potree.PointCloudMaterial();
-					
+
 				attributeMaterial.pointShape = Potree.PointShape.CIRCLE;
 				attributeMaterial.interpolate = (viewer.quality === "Interpolation");
 				attributeMaterial.weighted = false;
@@ -15577,11 +15574,11 @@ class EDLVRRenderer{
 				this.attributeMaterials.push(attributeMaterial);
 			}
 			var attributeMaterial = this.attributeMaterials[i];
-		
+
 			var octreeSize = pointcloud.pcoGeometry.boundingBox.getSize().x;
-		
+
 			originalMaterials.push(pointcloud.material);
-			
+
 			{// COLOR & DEPTH PASS
 				attributeMaterial = pointcloud.material;
 				attributeMaterial.pointShape = Potree.PointShape.CIRCLE;
@@ -15591,7 +15588,7 @@ class EDLVRRenderer{
 				attributeMaterial.maxSize = viewer.maxPointSize;
 				attributeMaterial.useLogarithmicDepthBuffer = false;
 				attributeMaterial.useEDL = true;
-				
+
 				attributeMaterial.size = viewer.pointSize;
 				attributeMaterial.pointSizeType = viewer.pointSizeType;
 				attributeMaterial.screenWidth = width;
@@ -15612,7 +15609,7 @@ class EDLVRRenderer{
 				attributeMaterial.bbSize = pointcloud.material.bbSize;
 				attributeMaterial.treeType = pointcloud.material.treeType;
 				attributeMaterial.uniforms.classificationLUT.value = pointcloud.material.uniforms.classificationLUT.value;
-				
+
 				pointcloud.material = attributeMaterial;
 
 				for(var j = 0; j < pointcloud.visibleNodes.length; j++){
@@ -15624,23 +15621,24 @@ class EDLVRRenderer{
 					}
 				}
 			}
-			
+
 		}
-		
+
 		//var queryPC = Potree.startQuery("PointCloud", viewer.renderer.getContext());
-        
-		viewer.renderer.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtColor);
-		viewer.renderer.render(viewer.scene.scene, viewer.scene.camera, this.rtColor);
-        
-        this.effect.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtColor);
+
+		//viewer.renderer.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtColor);
+		//viewer.renderer.render(viewer.scene.scene, viewer.scene.camera, this.rtColor);
+
         this.effect.render(viewer.scene.scene, viewer.scene.camera, this.rtColor);
+        this.effect.render(viewer.scene.scenePointCloud, viewer.scene.camera, this.rtColor);
+
 		//Potree.endQuery(queryPC, viewer.renderer.getContext());
-		
-		
+
+
 		// bit of a hack here. The EDL pass will mess up the text of the volume tool
 		// so volume tool is rendered again afterwards
 		//viewer.volumeTool.render(this.rtColor);
-				
+
 		for(var i = 0; i < viewer.scene.pointclouds.length; i++){
 			var pointcloud = viewer.scene.pointclouds[i];
 			var originalMaterial = originalMaterials[i];
@@ -15654,21 +15652,21 @@ class EDLVRRenderer{
 				}
 			}
 		}
-		
+
 		viewer.volumeTool.update();
-		viewer.renderer.render(viewer.volumeTool.sceneVolume, viewer.scene.camera, this.rtColor);
+		//viewer.renderer.render(viewer.volumeTool.sceneVolume, viewer.scene.camera, this.rtColor);
         this.effect.render(viewer.volumeTool.sceneVolume, viewer.scene.camera, this.rtColor);
-			
+
 		if(viewer.scene.pointclouds.length > 0){
-			
+
 			//var ext = viewer.renderer.getContext().getExtension("EXT_disjoint_timer_query");
 			//if(window.timerQuery == null){
 			//	window.timerQuery = ext.createQueryEXT();
 			//	ext.beginQueryEXT(ext.TIME_ELAPSED_EXT, window.timerQuery);
 			//}
-			
+
 			//var query = Potree.startQuery("EDL", viewer.renderer.getContext());
-			
+
 			{ // EDL OCCLUSION PASS
 				this.edlMaterial.uniforms.screenWidth.value = width;
 				this.edlMaterial.uniforms.screenHeight.value = height;
@@ -15679,39 +15677,40 @@ class EDLVRRenderer{
 				this.edlMaterial.depthTest = true;
 				this.edlMaterial.depthWrite = true;
 				this.edlMaterial.transparent = true;
-			
+
 				//Potree.utils.screenPass.render(viewer.renderer, this.edlMaterial);
                 Potree.utils.screenPass.render(this.effect, this.edlMaterial);
 			}
 
-//			viewer.renderer.render(viewer.scene.scene, viewer.scene.camera);
-			
+			//viewer.renderer.render(viewer.scene.scene, viewer.scene.camera);
+            this.effect.render(viewer.scene.scene, viewer.scene.camera);
+
 			//Potree.endQuery(query, viewer.renderer.getContext());
 			//Potree.resolveQueries(viewer.renderer.getContext());
-			
-			
+
+
 			viewer.renderer.clearDepth();
-			//viewer.volumeTool.update();
-			viewer.renderer.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
-			viewer.renderer.render(viewer.controls.sceneControls, viewer.scene.camera);
+			viewer.volumeTool.update();
+			//viewer.renderer.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
+			//viewer.renderer.render(viewer.controls.sceneControls, viewer.scene.camera);
             this.effect.render(viewer.volumeTool.sceneVolume, viewer.scene.camera);
             this.effect.render(viewer.controls.sceneControls, viewer.scene.camera);
-			
-			
+
+
 			viewer.measuringTool.update();
 			viewer.profileTool.update();
 			viewer.transformationTool.update();
-			
-			viewer.renderer.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
-			viewer.renderer.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
-			viewer.renderer.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
+
+			//viewer.renderer.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
+			//viewer.renderer.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
+			//viewer.renderer.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
 
             this.effect.render(viewer.measuringTool.sceneMeasurement, viewer.scene.camera);
             this.effect.render(viewer.profileTool.sceneProfile, viewer.scene.camera);
             this.effect.render(viewer.transformationTool.sceneTransform, viewer.scene.camera);
 		}
-		
-		
+
+
 		//{
 		//	let renderer = viewer.renderer;
 		//	let pickWindowSize = 128;
@@ -15720,14 +15719,14 @@ class EDLVRRenderer{
 		//	let pixels = new Uint8Array(buffer);
 		//	let ibuffer = new Uint32Array(buffer);
 		//	renderer.context.readPixels(
-		//		800 - (pickWindowSize-1) / 2, 500 - (pickWindowSize-1) / 2, 
-		//		pickWindowSize, pickWindowSize, 
+		//		800 - (pickWindowSize-1) / 2, 500 - (pickWindowSize-1) / 2,
+		//		pickWindowSize, pickWindowSize,
 		//		renderer.context.RGBA, renderer.context.UNSIGNED_BYTE, pixels);
-		//		
+		//
 		//	console.log(pixels[i]);
 		//}
 
-		
+
 
 	}
 };
@@ -17898,6 +17897,12 @@ var WEBVR = {
 		window.addEventListener( 'vrdisplaypresentchange', function () {
 
 			button.textContent = display.isPresenting ? 'EXIT VR' : 'ENTER VR';
+            if (screenfull.enabled) {
+		        screenfull.toggle();
+	        } else {
+		        // Ignore or do something else
+				screenfull.exit();
+	        }
 
 		}, false );
 
@@ -17906,6 +17911,157 @@ var WEBVR = {
 	}
 
 };
+
+/*!
+* screenfull
+* v3.0.2 - 2017-03-13
+* (c) Sindre Sorhus; MIT License
+*/
+(function () {
+	'use strict';
+
+	var isCommonjs = typeof module !== 'undefined' && module.exports;
+	var keyboardAllowed = typeof Element !== 'undefined' && 'ALLOW_KEYBOARD_INPUT' in Element;
+
+	var fn = (function () {
+		var val;
+
+		var fnMap = [
+			[
+				'requestFullscreen',
+				'exitFullscreen',
+				'fullscreenElement',
+				'fullscreenEnabled',
+				'fullscreenchange',
+				'fullscreenerror'
+			],
+			// new WebKit
+			[
+				'webkitRequestFullscreen',
+				'webkitExitFullscreen',
+				'webkitFullscreenElement',
+				'webkitFullscreenEnabled',
+				'webkitfullscreenchange',
+				'webkitfullscreenerror'
+
+			],
+			// old WebKit (Safari 5.1)
+			[
+				'webkitRequestFullScreen',
+				'webkitCancelFullScreen',
+				'webkitCurrentFullScreenElement',
+				'webkitCancelFullScreen',
+				'webkitfullscreenchange',
+				'webkitfullscreenerror'
+
+			],
+			[
+				'mozRequestFullScreen',
+				'mozCancelFullScreen',
+				'mozFullScreenElement',
+				'mozFullScreenEnabled',
+				'mozfullscreenchange',
+				'mozfullscreenerror'
+			],
+			[
+				'msRequestFullscreen',
+				'msExitFullscreen',
+				'msFullscreenElement',
+				'msFullscreenEnabled',
+				'MSFullscreenChange',
+				'MSFullscreenError'
+			]
+		];
+
+		var i = 0;
+		var l = fnMap.length;
+		var ret = {};
+
+		for (; i < l; i++) {
+			val = fnMap[i];
+			if (val && val[1] in document) {
+				for (i = 0; i < val.length; i++) {
+					ret[fnMap[0][i]] = val[i];
+				}
+				return ret;
+			}
+		}
+
+		return false;
+	})();
+
+	var screenfull = {
+		request: function (elem) {
+			var request = fn.requestFullscreen;
+
+			elem = elem || document.documentElement;
+
+			// Work around Safari 5.1 bug: reports support for
+			// keyboard in fullscreen even though it doesn't.
+			// Browser sniffing, since the alternative with
+			// setTimeout is even worse.
+			if (/5\.1[.\d]* Safari/.test(navigator.userAgent)) {
+				elem[request]();
+			} else {
+				elem[request](keyboardAllowed && Element.ALLOW_KEYBOARD_INPUT);
+			}
+		},
+		exit: function () {
+			document[fn.exitFullscreen]();
+		},
+		toggle: function (elem) {
+			if (this.isFullscreen) {
+				this.exit();
+			} else {
+				this.request(elem);
+			}
+		},
+		onchange: function (callback) {
+			document.addEventListener(fn.fullscreenchange, callback, false);
+		},
+		onerror: function (callback) {
+			document.addEventListener(fn.fullscreenerror, callback, false);
+		},
+		raw: fn
+	};
+
+	if (!fn) {
+		if (isCommonjs) {
+			module.exports = false;
+		} else {
+			window.screenfull = false;
+		}
+
+		return;
+	}
+
+	Object.defineProperties(screenfull, {
+		isFullscreen: {
+			get: function () {
+				return Boolean(document[fn.fullscreenElement]);
+			}
+		},
+		element: {
+			enumerable: true,
+			get: function () {
+				return document[fn.fullscreenElement];
+			}
+		},
+		enabled: {
+			enumerable: true,
+			get: function () {
+				// Coerce to boolean in case of old WebKit
+				return Boolean(document[fn.fullscreenEnabled]);
+			}
+		}
+	});
+
+	if (isCommonjs) {
+		module.exports = screenfull;
+	} else {
+		window.screenfull = screenfull;
+	}
+})();
 
 
 

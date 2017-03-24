@@ -119,6 +119,12 @@ var WEBVR = {
 		window.addEventListener( 'vrdisplaypresentchange', function () {
 
 			button.textContent = display.isPresenting ? 'EXIT VR' : 'ENTER VR';
+            if (screenfull.enabled) {
+		        screenfull.toggle();
+	        } else {
+		        // Ignore or do something else
+				screenfull.exit();
+	        }
 
 		}, false );
 
